@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { FolderOpen, Palette, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { CategoryDot } from "@/components/ui";
+import { useShellOverlay } from "@/components/ui/shell/ShellOverlayContext";
 import { pillBtn, popover as popoverRecipe } from "@/lib/theme";
 import { CALENDAR_COLOR_GROUPS } from "@/data/calendarColors";
 import { buildCategoryTree, type CategoryNode } from "@/utils/categoryUtils";
@@ -14,6 +15,7 @@ import {
   countLabel,
   barDivider,
   barBtn,
+  btnLabel,
   escHint,
   menu,
   menuItem,
@@ -57,6 +59,12 @@ export function BulkActionBar({
   const [openMenu, setOpenMenu] = useState<MenuKey | null>(null);
   const barBtnClass = `${pillBtn({ variant: "glass", size: "sm" })} ${barBtn}`;
 
+  // The bar is mounted only while a selection exists; while it's up, the
+  // mobile floating menu (and corner cluster) step aside so the bar can take
+  // the menu's spot at the bottom. No-op on desktop, where that chrome is
+  // hidden anyway.
+  useShellOverlay(true);
+
   const flatCategories = useMemo(() => {
     const out: Array<{ category: Category; depth: number }> = [];
     flattenTree(buildCategoryTree(categories), 0, out);
@@ -82,9 +90,13 @@ export function BulkActionBar({
 
       <Popover.Root {...menuProps("category")}>
         <Popover.Trigger asChild>
-          <button type="button" className={barBtnClass}>
+          <button
+            type="button"
+            className={barBtnClass}
+            aria-label="Assign category"
+          >
             <FolderOpen size={13} strokeWidth={2} aria-hidden />
-            Category
+            <span className={btnLabel}>Category</span>
           </button>
         </Popover.Trigger>
         <Popover.Portal>
@@ -128,9 +140,9 @@ export function BulkActionBar({
 
       <Popover.Root {...menuProps("color")}>
         <Popover.Trigger asChild>
-          <button type="button" className={barBtnClass}>
+          <button type="button" className={barBtnClass} aria-label="Set color">
             <Palette size={13} strokeWidth={2} aria-hidden />
-            Color
+            <span className={btnLabel}>Color</span>
           </button>
         </Popover.Trigger>
         <Popover.Portal>
@@ -163,9 +175,13 @@ export function BulkActionBar({
 
       <Popover.Root {...menuProps("priority")}>
         <Popover.Trigger asChild>
-          <button type="button" className={barBtnClass}>
+          <button
+            type="button"
+            className={barBtnClass}
+            aria-label="Set priority"
+          >
             <SlidersHorizontal size={13} strokeWidth={2} aria-hidden />
-            Priority
+            <span className={btnLabel}>Priority</span>
           </button>
         </Popover.Trigger>
         <Popover.Portal>
@@ -198,9 +214,10 @@ export function BulkActionBar({
         type="button"
         className={pillBtn({ variant: "danger", size: "sm" })}
         onClick={onDelete}
+        aria-label="Delete selected"
       >
         <Trash2 size={13} strokeWidth={2} aria-hidden />
-        Delete
+        <span className={btnLabel}>Delete</span>
       </button>
 
       <span className={barDivider} aria-hidden />

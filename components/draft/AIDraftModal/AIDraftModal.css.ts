@@ -6,9 +6,10 @@ import { themeTransition } from "@/lib/theme/transitions";
 
 export const MODAL_FADE_MS = 220;
 
-// Fills the AppShell main column (the mount point is the assistantSlot inside
-// mainColumn), leaving the sidebar visible and interactive. Sits above page
-// content but below the Capture/Search palettes (zIndex.palette).
+// Fills the AppShell canvas (the assistantSlot mounts as a canvas child), so
+// it covers the sidebar and mobile tabs — route changes underneath got messy
+// — while clipping to the shell's rounded frame. Still below the
+// Capture/Search palettes (zIndex.palette) and confirms.
 export const overlay = style({
   position: "absolute",
   inset: 0,

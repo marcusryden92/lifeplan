@@ -330,6 +330,8 @@ function unschedulableBody(reason: SchedulingFailureReason): string {
   switch (reason) {
     case SchedulingFailureReason.NO_SLOTS:
       return "No available time slots within the search horizon.";
+    case SchedulingFailureReason.IMPOSSIBLE_CONSTRAINTS:
+      return "This item's allowed times and its category's scheduled windows never overlap — no week has a moment where both permit it. Widen its allowed times or the category's windows.";
     case SchedulingFailureReason.ITERATION_LIMIT:
       return "Scheduling gave up after too many attempts.";
     case SchedulingFailureReason.DEPENDENCY_CONFLICT:

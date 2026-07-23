@@ -1,5 +1,18 @@
 import type { Category } from "@/types/prisma";
 
+// Sibling order is alphabetical: categories carry no user-authored ordering
+// (the rail's drag is folder-like — nest/unnest only, no reordering), so name
+// is the one predictable sort. numeric keeps "Week 2" ahead of "Week 10";
+// createdAt breaks name ties deterministically.
+export function compareCategoryNames(a: Category, b: Category): number {
+  const byName = a.name.localeCompare(b.name, undefined, {
+    sensitivity: "base",
+    numeric: true,
+  });
+  if (byName !== 0) return byName;
+  return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+}
+
 export type IndentedCategory = Category & {
   depth: number;
   isLastSibling: boolean;
@@ -24,15 +37,8 @@ export function buildIndentedCategoryList(
     byParent.get(key)!.push(c);
   }
 
-  // Sort each sibling group by sortOrder then createdAt then name
   for (const group of byParent.values()) {
-    group.sort((a, b) => {
-      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
-      const aCreated = new Date(a.createdAt).getTime();
-      const bCreated = new Date(b.createdAt).getTime();
-      if (aCreated !== bCreated) return aCreated - bCreated;
-      return a.name.localeCompare(b.name);
-    });
+    group.sort(compareCategoryNames);
   }
 
   const visit = (cat: Category, depth: number) => {
@@ -87,15 +93,8 @@ export function buildCategoryTree(categories: Category[]): CategoryNode[] {
     byParent.get(key)!.push(c);
   }
 
-  // Sort each sibling group by sortOrder then createdAt then name
   for (const group of byParent.values()) {
-    group.sort((a, b) => {
-      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
-      const aCreated = new Date(a.createdAt).getTime();
-      const bCreated = new Date(b.createdAt).getTime();
-      if (aCreated !== bCreated) return aCreated - bCreated;
-      return a.name.localeCompare(b.name);
-    });
+    group.sort(compareCategoryNames);
   }
 
   const buildNode = (cat: Category): CategoryNode => {

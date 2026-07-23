@@ -260,7 +260,7 @@ export function updateDraftItems(
           failures.push({
             id,
             reason:
-              "splitting requires minMinutes >= 5 and maxMinutes >= minMinutes (maxMinutesPerDay, minSpacingMinutes optional)",
+              "splitting requires minMinutes >= 5 and maxMinutes >= minMinutes or 0 for no upper bound (maxMinutesPerDay, minSpacingMinutes optional)",
           });
           continue;
         }

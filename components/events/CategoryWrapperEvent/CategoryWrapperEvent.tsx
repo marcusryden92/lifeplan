@@ -18,7 +18,6 @@ interface CategoryWrapperEventProps {
   wrapperId: string;
   trespassingStart?: boolean;
   trespassingEnd?: boolean;
-  onHover?: (categoryName: string | null, categoryColor: string | null) => void;
 }
 
 export function CategoryWrapperEvent({
@@ -31,16 +30,7 @@ export function CategoryWrapperEvent({
   wrapperId: _wrapperId,
   trespassingStart = false,
   trespassingEnd = false,
-  onHover,
 }: CategoryWrapperEventProps) {
-  const handleMouseEnter = () => {
-    onHover?.(categoryName, categoryColor || null);
-  };
-
-  const handleMouseLeave = () => {
-    onHover?.(null, null);
-  };
-
   const accent = categoryColor || vars.accent.primary;
   const stripeColor = `color-mix(in srgb, ${accent} ${colorMixAlpha.selectedFill}%, transparent)`;
   const fillTint = `color-mix(in srgb, ${accent} 12%, transparent)`;
@@ -84,6 +74,11 @@ export function CategoryWrapperEvent({
     <div
       ref={wrapperRef}
       className={wrapper}
+      // Read by the calendar's cursor hit-test (page.tsx) so the header chip
+      // reflects this window even when a foreground tile is painted over it.
+      data-hover-window=""
+      data-hover-name={categoryName}
+      data-hover-color={categoryColor ?? ""}
       style={{
         background: fillTint,
         ...(trespassingStart && {
@@ -93,8 +88,6 @@ export function CategoryWrapperEvent({
           borderBottom: `${trespassPx} solid ${TRESPASS_BORDER_COLOR}`,
         }),
       }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
     >
       <svg aria-hidden className={stripeSvg}>
         <defs>

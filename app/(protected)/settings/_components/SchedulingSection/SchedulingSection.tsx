@@ -1,17 +1,20 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   Bike,
   Car,
   Footprints,
+  RefreshCw,
   Train,
   type LucideIcon,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
+import * as locationActions from "@/actions/locations";
 import { updateDefaultTransportMode } from "@/actions/locations";
 import { updateWeekStartDay } from "@/actions/scheduling";
 import {
+  setAllTravelTimes,
   setDefaultTransportMode,
   setEnableTravelEvents,
   setWeekStartDay,
@@ -19,8 +22,10 @@ import {
 import type { AppDispatch, RootState } from "@/redux/store";
 import type { TransportMode } from "@/generated/client";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
+import { useCalendarProvider } from "@/context/CalendarProvider";
+import { serializeTravelTime } from "@/utils/locations";
 import { useServerAction } from "@/hooks/useServerAction";
-import { SegmentedControl } from "@/components/ui";
+import { Button, ConfirmModal, SegmentedControl } from "@/components/ui";
 import { StatusLine } from "../StatusLine";
 import {
   card,
@@ -71,6 +76,10 @@ export function SchedulingSection() {
   const weekStartDay = useSelector(
     (state: RootState) => state.schedulingSettings.weekStartDay,
   );
+  const locations = useSelector(
+    (state: RootState) => state.schedulingSettings.locations,
+  );
+  const { markSynced } = useCalendarProvider();
 
   const saveMode = useCallback(async (mode: TransportMode) => {
     await updateDefaultTransportMode(mode);
@@ -114,6 +123,25 @@ export function SchedulingSection() {
 
   const toggleTravelEvents = () => {
     dispatch(setEnableTravelEvents(!enableTravelEvents));
+  };
+
+  const refreshAction = useServerAction(locationActions.refreshAllTravelTimes);
+  const [confirmRefresh, setConfirmRefresh] = useState(false);
+
+  const handleRefreshAll = async () => {
+    setConfirmRefresh(false);
+    refreshAction.clear();
+    const result = await refreshAction.run(transportMode);
+    if (!result) return;
+    const fresh = await locationActions.fetchTravelTimes();
+    const serialized = fresh.map(serializeTravelTime);
+    dispatch(setAllTravelTimes(serialized));
+    markSynced("travelTimes", serialized);
+    refreshAction.setSuccess(
+      result.failed > 0
+        ? `Refreshed ${result.updated} travel times. ${result.failed} pair${result.failed > 1 ? "s" : ""} couldn't be routed.`
+        : `Refreshed ${result.updated} travel times.`,
+    );
   };
 
   return (
@@ -185,6 +213,45 @@ export function SchedulingSection() {
             />
           </button>
         </div>
+      </div>
+
+      <div className={card}>
+        <span className={cardTitle}>Travel times</span>
+        <span className={fieldNote}>
+          Re-fetches every location pair for the current transport mode from
+          Google. Day to day you shouldn&apos;t need this — new pairs are picked
+          up with &ldquo;Fetch missing&rdquo; on the Locations page. Custom
+          overrides are kept.
+        </span>
+        <div className={rowSplit}>
+          <Button
+            variant="glass"
+            size="sm"
+            onClick={() => setConfirmRefresh(true)}
+            disabled={refreshAction.isPending || locations.length < 2}
+          >
+            <RefreshCw size={12} strokeWidth={2.2} />
+            {refreshAction.isPending ? "Refreshing…" : "Refresh all travel times"}
+          </Button>
+        </div>
+        <div className={footerRow}>
+          <StatusLine status={refreshAction.status} />
+        </div>
+        <ConfirmModal
+          open={confirmRefresh}
+          title="Refresh all travel times?"
+          confirmLabel="Refresh all"
+          body={
+            <p style={{ margin: 0 }}>
+              This re-fetches every pair between your {locations.length}{" "}
+              locations from Google in one go. If you just added or changed a
+              location, &ldquo;Fetch missing&rdquo; on the Locations page covers
+              it without re-fetching everything.
+            </p>
+          }
+          onCancel={() => setConfirmRefresh(false)}
+          onConfirm={handleRefreshAll}
+        />
       </div>
 
       <div className={card}>

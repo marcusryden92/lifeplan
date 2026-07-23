@@ -21,7 +21,7 @@ import {
   vars,
 } from "@/components/ui";
 
-type BackdropVariant = "pinstripe" | "blob" | "both" | "none";
+type BackdropVariant = "pinstripe" | "none";
 
 const SWATCHES = [
   { name: "blue", color: "#3b82f6" },
@@ -34,11 +34,11 @@ const SWATCHES = [
   { name: "teal", color: "#14b8a6" },
 ];
 
-const BACKDROPS: BackdropVariant[] = ["pinstripe", "blob", "both", "none"];
+const BACKDROPS: BackdropVariant[] = ["pinstripe", "none"];
 
 export default function TestTokensPage() {
   const { dark, toggle } = useTheme();
-  const [backdrop, setBackdrop] = useState<BackdropVariant>("blob");
+  const [backdrop, setBackdrop] = useState<BackdropVariant>("pinstripe");
   return (
     <div
       className={sprinkles({

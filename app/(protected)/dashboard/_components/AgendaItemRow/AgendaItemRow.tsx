@@ -27,6 +27,7 @@ import {
   rowLabel,
   rowLabelNow,
   rowLabelNext,
+  rowLabelDetail,
 } from "./AgendaItemRow.css";
 
 type Props = {
@@ -67,7 +68,14 @@ export function AgendaItemRow({ item, onClick }: Props) {
         <div className={`${rowLabel} ${rowLabelNow}`}>NOW</div>
       )}
       {item.next && (
-        <div className={`${rowLabel} ${rowLabelNext}`}>NEXT</div>
+        <div className={`${rowLabel} ${rowLabelNext}`}>
+          NEXT
+          {item.startsInMinutes !== undefined && (
+            <span className={rowLabelDetail}>
+              starts in {formatDurationCompact(item.startsInMinutes)}
+            </span>
+          )}
+        </div>
       )}
       <div
       className={rowClass}

@@ -49,6 +49,12 @@ model TravelTime {
   customRegularMinutes  Int?
   customNightMinutes    Int?
 
+  // Negative cache: set when Google returned no route for this pair. The row
+  // exists so the missing-pairs diff stops re-buying the same failure; the
+  // engine and matrix UI treat it as no-route, and it becomes eligible for a
+  // retry once the stamp is old enough (see utils/locations/travelRefreshPolicy).
+  unroutableAt DateTime?
+
   userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -60,6 +66,20 @@ model TravelTime {
   @@unique([fromLocationId, toLocationId, transportMode])
   @@index([userId])
   @@map("TravelTimes")
+}
+
+// Account-global monthly budget for Routes API matrix elements — the hard
+// stop that keeps matrix spend inside the free tier. Deliberately NOT
+// per-user: Google's free caps pool across the whole billing account. Single
+// row (id "global"), reserved inside a transaction before every matrix call;
+// the count resets when periodStart's month rolls over.
+model TravelApiBudget {
+  id                String   @id @default("global")
+  elementsThisMonth Int      @default(0)
+  periodStart       DateTime
+  updatedAt         DateTime @updatedAt
+
+  @@map("TravelApiBudget")
 }
 
 enum TransportMode {

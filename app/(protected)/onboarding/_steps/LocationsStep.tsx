@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Button, FieldStack, ResponsiveSegmentedControl } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -81,22 +81,8 @@ export function LocationsStep({
     (state: RootState) => state.schedulingSettings.defaultTransportMode,
   );
 
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    locationActions
-      .createSessionToken()
-      .then((token) => {
-        if (active) setSessionToken(token);
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const handleTransportChange = (mode: TransportMode) => {
     dispatch(setDefaultTransportMode(mode));
@@ -150,7 +136,7 @@ export function LocationsStep({
         const created = await locationActions.createLocation({
           name: row.name.trim(),
           placeId: row.selected!.placeId,
-          sessionToken: sessionToken ?? undefined,
+          sessionToken: row.sessionToken ?? undefined,
         });
         const serialized = serializeLocation(created);
         dispatch(upsertLocation(serialized));
@@ -213,11 +199,7 @@ export function LocationsStep({
         </span>
       </FieldStack>
 
-      <LocationRows
-        rows={rows}
-        onChange={onRowsChange}
-        sessionToken={sessionToken}
-      />
+      <LocationRows rows={rows} onChange={onRowsChange} />
 
       {error && <span className={errorText}>{error}</span>}
     </StepFrame>

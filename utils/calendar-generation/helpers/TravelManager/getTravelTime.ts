@@ -46,6 +46,10 @@ export function getTravelTime(
   const travelKey = `${fromLocationId}->${toLocationId}`;
   const entry = travelTimeMatrix.get(travelKey);
 
+  // Absent covers never-fetched AND negative-cached unroutable pairs (dropped
+  // in deriveTravelTimeMatrix) — both schedule as instant travel. Known-
+  // impossible is flagged in the Locations UI, not here; the override is the
+  // escape hatch.
   if (!entry) {
     return 0;
   }

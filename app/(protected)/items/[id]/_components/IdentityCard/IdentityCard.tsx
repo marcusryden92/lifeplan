@@ -7,6 +7,7 @@ import { EarliestStartSection } from "./EarliestStartSection";
 import { DurationSection } from "./DurationSection";
 import { LocationSection } from "./LocationSection";
 import { ColorSection } from "./ColorSection";
+import { PrioritySection } from "./PrioritySection";
 import { RecurrenceSection } from "./RecurrenceSection";
 import { SplittingSection } from "./SplittingSection";
 import { DailyLimitSection } from "./DailyLimitSection";
@@ -19,6 +20,9 @@ import {
   rulesSlot,
 } from "./IdentityCard.css";
 
+// Row semantics: identity (type, category, color), core facts (when, how
+// long), scheduling preferences (priority, earliest start — both ghost
+// together for plans), then place and rules spanning the full width.
 export function IdentityCard() {
   return (
     <div className={card}>
@@ -28,9 +32,10 @@ export function IdentityCard() {
           <div className={doubleGrid}>
             <CategorySection /> <ColorSection />
           </div>
-          <DateSection />
-          <DurationSection />
           <EarliestStartSection />
+          <DateSection />
+          <PrioritySection />
+          <DurationSection />
           <LocationSection />
           <div className={rulesSlot}>
             <SplittingSection />

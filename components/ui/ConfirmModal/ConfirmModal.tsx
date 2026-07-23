@@ -9,6 +9,7 @@ import {
   modalTitle,
   modalBody,
   modalActions,
+  modalCancel,
 } from "./ConfirmModal.css";
 
 type ConfirmTone = "default" | "danger";
@@ -55,7 +56,12 @@ export function ConfirmModal({
           <div className={modalActions}>
             {extraActions}
             <AlertDialog.Cancel asChild>
-              <Button variant="glass" size="sm" onClick={onCancel}>
+              <Button
+                variant="glass"
+                size="sm"
+                className={modalCancel}
+                onClick={onCancel}
+              >
                 {cancelLabel}
               </Button>
             </AlertDialog.Cancel>

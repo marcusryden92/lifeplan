@@ -480,3 +480,13 @@ globalStyle(`${FC} .fc-event`, {
   WebkitUserSelect: "none",
   userSelect: "none",
 });
+
+// While a drag hovers a spot the drop will be rejected (window overlap), the
+// preview keeps following the cursor — eventAllow only marks the host, and
+// this red treatment is the "can't drop here" signal. The rejection itself
+// happens on release (the drop/resize handlers revert).
+globalStyle(`${FC}[data-drop-invalid="true"] .fc-event-mirror`, {
+  outline: `2px solid ${vars.status.error}`,
+  outlineOffset: -2,
+  filter: "saturate(0.35)",
+});

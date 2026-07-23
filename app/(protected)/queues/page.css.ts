@@ -19,43 +19,6 @@ export const page = style({
   },
 });
 
-export const subHeader = style({
-  display: "flex",
-  alignItems: "baseline",
-  gap: space["3"],
-  padding: "20px 28px 18px",
-  flexShrink: 0,
-  "@media": {
-    [media.mobile]: {
-      padding: "16px 16px 12px",
-      flexWrap: "wrap",
-      gap: space["2.5"],
-    },
-  },
-});
-
-export const pageTitle = style([
-  display.pageTitle,
-  {
-    color: vars.ink,
-    lineHeight: 1,
-    margin: 0,
-    transition: themeTransition,
-    "@media": {
-      [media.mobile]: { fontSize: 24 },
-    },
-  },
-]);
-
-export const titleSummary = style([
-  text.bodySm,
-  {
-    color: vars.muted,
-    fontVariantNumeric: "tabular-nums",
-    transition: themeTransition,
-  },
-]);
-
 export const mainGrid = style({
   display: "grid",
   gridTemplateColumns: "260px 1fr",
@@ -197,10 +160,21 @@ export const queueHeader = style({
   transition: themeTransition,
 });
 
-export const queueTitleInput = style({
-  flex: 1,
-  minWidth: 160,
-});
+export const queueTitleInput = style([
+  display.pageTitle,
+  {
+    flex: 1,
+    minWidth: 160,
+    lineHeight: "32px",
+    height: 32,
+    // Always-mounted title editor: titleInline's permanent accent underline
+    // reads as a stuck focus state here, so show it only while editing.
+    selectors: {
+      "&&": { borderBottomColor: "transparent" },
+      "&&:focus": { borderBottomColor: vars.accent.primary },
+    },
+  },
+]);
 
 export const headerControls = style({
   display: "flex",

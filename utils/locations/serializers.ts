@@ -25,5 +25,6 @@ export function serializeTravelTime(tt: TravelTime): SerializedTravelTime {
     customRushHourMinutes: tt.customRushHourMinutes,
     customRegularMinutes: tt.customRegularMinutes,
     customNightMinutes: tt.customNightMinutes,
+    unroutable: tt.unroutableAt !== null,
   };
 }

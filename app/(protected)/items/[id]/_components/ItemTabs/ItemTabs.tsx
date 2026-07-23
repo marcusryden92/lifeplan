@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useItem } from "../ItemContext";
 import {
   tabsStrip,
   tab,
@@ -10,8 +9,6 @@ import {
   tabCount,
   tabDisabled,
 } from "./ItemTabs.css";
-
-import { PrioritySection } from "../IdentityCard/PrioritySection";
 
 interface Tab {
   key: string;
@@ -35,8 +32,6 @@ export function ItemTabs({
   const pathname = usePathname();
   const base = `/items/${itemId}`;
 
-  const { item } = useItem();
-
   const tabs: Tab[] = [
     { key: "overview", label: "Overview", href: base },
     {
@@ -47,6 +42,7 @@ export function ItemTabs({
       disabled: !subtasksEnabled,
     },
     { key: "schedule", label: "Schedule", href: `${base}/schedule` },
+    { key: "alerts", label: "Alerts", href: `${base}/alerts` },
   ];
 
   return (
@@ -90,7 +86,6 @@ export function ItemTabs({
           </Link>
         );
       })}
-      {item.plannerType !== "plan" && <PrioritySection />}
     </div>
   );
 }

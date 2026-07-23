@@ -55,6 +55,20 @@ export const radii = {
   pill: 999,
 } as const;
 
+// Cool-gray ramp: hue 225, 10% saturation, one stop every 5% of lightness
+// (0-100), keyed by lightness percentage. Theme-independent — the dark-mode
+// shell surfaces pick the dark end.
+export const grayscale = Object.fromEntries(
+  Array.from({ length: 21 }, (_, i) => [i * 5, `hsl(225, 10%, ${i * 5}%)`])
+) as Record<number, string>;
+
+// Warm off-white paper surfaces for the light-mode shell (original paper hue).
+export const paperSurface = {
+  canvas: "hsl(37, 20%, 90%)",
+  sidebar: "hsl(37, 20%, 93%)",
+  content: "hsl(37, 20%, 96%)",
+} as const;
+
 // Content-width scale for layouts and text measures.
 //   xs   — feature/CTA copy
 //   sm   — comfortable reading measure

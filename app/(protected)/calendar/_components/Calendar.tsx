@@ -90,10 +90,6 @@ const VIEWS = {
 
 interface CalendarProps {
   initialDate: Date;
-  onCategoryHover?: (
-    categoryName: string | null,
-    categoryColor: string | null,
-  ) => void;
   dayHeaderContent?: React.ComponentProps<
     typeof FullCalendar
   >["dayHeaderContent"];
@@ -106,11 +102,7 @@ interface CalendarProps {
 // updates re-render the page continuously during drags), the interaction dies
 // without firing eventDrop: the tile stays painted at the drop position while
 // nothing was dispatched.
-function Calendar({
-  initialDate,
-  onCategoryHover,
-  dayHeaderContent,
-}: CalendarProps) {
+function Calendar({ initialDate, dayHeaderContent }: CalendarProps) {
   const {
     userId,
     weekStartDay,
@@ -420,7 +412,6 @@ function Calendar({
             wrapperId={wrapperId}
             trespassingStart={trespassingStart}
             trespassingEnd={trespassingEnd}
-            onHover={onCategoryHover}
           />
         );
       }
@@ -513,7 +504,7 @@ function Calendar({
 
       return <EventContent event={event} />;
     },
-    [onCategoryHover, updateTemplateArray, userId],
+    [updateTemplateArray, userId],
   );
 
   return (

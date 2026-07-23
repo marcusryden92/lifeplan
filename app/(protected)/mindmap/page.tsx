@@ -6,6 +6,7 @@ import { useSelector } from "react-redux";
 import { ArrowLeft, Sliders } from "lucide-react";
 import {
   BottomSheet,
+  Button,
   Kbd,
   Loader,
   Switch,
@@ -16,6 +17,7 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 import { usePlatform } from "@/hooks/usePlatform";
 import { useCoarsePointer } from "@/hooks/useCoarsePointer";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useViewStatePersistence } from "@/hooks/useViewStatePersistence";
 import type { RootState } from "@/redux/store";
 import { plannerIsCompleted } from "@/utils/plannerCompletion";
 import {
@@ -57,6 +59,8 @@ import {
   sheetRowLabel,
   sheetZoomTrack,
   sheetHint,
+  sheetColumns,
+  sheetColumn,
 } from "./page.css";
 
 const DEFAULT_ZOOM = 46;
@@ -87,7 +91,8 @@ export default function MindmapPage() {
   );
   const scale = mindmapZoomToScale(zoom);
 
-  // Layout settings persist per user, like the theme preference.
+  // Legacy localStorage layout blob: read once as the pre-DB seed (the DB
+  // view state below overrides it when present, and now owns all saves).
   const storageKey = user?.id ? `circadium.mindmap.layout.${user.id}` : null;
   const settingsLoadedRef = useRef(false);
   useEffect(() => {
@@ -103,14 +108,47 @@ export default function MindmapPage() {
       // ignore malformed stored settings
     }
   }, [storageKey]);
-  useEffect(() => {
-    if (!settingsLoadedRef.current || !storageKey) return;
+
+  // Zoom is deliberately not persisted: the canvas re-fits on mount and on
+  // layout-mode switches, so a restored zoom would just be yanked away.
+  const viewSnapshot = useMemo(
+    () =>
+      JSON.stringify({ showCompleted, hideEmpty, showLeaves, layoutOptions }),
+    [showCompleted, hideEmpty, showLeaves, layoutOptions],
+  );
+  useViewStatePersistence("mindmap", viewSnapshot, (raw) => {
     try {
-      localStorage.setItem(storageKey, JSON.stringify(layoutOptions));
+      const saved = JSON.parse(raw) as Record<string, unknown>;
+      if (typeof saved.showCompleted === "boolean")
+        setShowCompleted(saved.showCompleted);
+      if (typeof saved.hideEmpty === "boolean") setHideEmpty(saved.hideEmpty);
+      if (typeof saved.showLeaves === "boolean")
+        setShowLeaves(saved.showLeaves);
+      if (saved.layoutOptions && typeof saved.layoutOptions === "object") {
+        setLayoutOptions({
+          ...MINDMAP_LAYOUT_DEFAULTS,
+          ...(saved.layoutOptions as Partial<MindmapLayoutOptions>),
+        });
+      }
     } catch {
-      // ignore quota / privacy-mode failures
+      // Malformed blob: keep defaults.
     }
-  }, [layoutOptions, storageKey]);
+  });
+
+  const resetView = () => {
+    setZoom(DEFAULT_ZOOM);
+    setShowCompleted(false);
+    setHideEmpty(false);
+    setShowLeaves(false);
+    setLayoutOptions(MINDMAP_LAYOUT_DEFAULTS);
+    if (storageKey) {
+      try {
+        localStorage.removeItem(storageKey);
+      } catch {
+        // ignore privacy-mode failures
+      }
+    }
+  };
 
   const patchLayoutOptions = useCallback((patch: Partial<MindmapLayoutOptions>) => {
     setLayoutOptions((prev) => ({ ...prev, ...patch }));
@@ -253,6 +291,9 @@ export default function MindmapPage() {
                 />
               </div>
             </div>
+            <Button variant="ghost" size="sm" onClick={resetView}>
+              Reset view
+            </Button>
           </div>
         )}
       </div>
@@ -334,60 +375,71 @@ export default function MindmapPage() {
           onOpenChange={setSettingsOpen}
           title="Settings"
         >
-          <span className={sheetSection}>View</span>
-          <div className={sheetRow}>
-            <span className={sheetRowLabel}>Leaf tasks</span>
-            <Switch
-              checked={showLeaves}
-              onCheckedChange={setShowLeaves}
-              aria-label="Branch each goal out into its leaf tasks"
-            />
-          </div>
-          <div className={sheetRow}>
-            <span className={sheetRowLabel}>Hide empty</span>
-            <Switch
-              checked={hideEmpty}
-              onCheckedChange={setHideEmpty}
-              aria-label="Hide roles and categories with no items"
-            />
-          </div>
-          <div className={sheetRow}>
-            <span className={sheetRowLabel}>Show completed</span>
-            <Switch
-              checked={showCompleted}
-              onCheckedChange={setShowCompleted}
-              aria-label="Show completed items"
-            />
-          </div>
-          <div className={sheetRow}>
-            <span className={sheetRowLabel}>Zoom</span>
-            <div className={sheetZoomTrack}>
-              <div className={zoomTrackBar} />
-              <div
-                className={zoomFill}
-                style={{
-                  width: `calc(${zoom}% + ${(SLIDER_THUMB_PX * (50 - zoom)) / 100}px)`,
-                }}
-              />
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={1}
-                value={zoom}
-                onChange={(e) => setZoom(Number(e.target.value))}
-                className={zoomSlider}
-                aria-label="Zoom mindmap"
-              />
+          <div className={sheetColumns}>
+            <div className={sheetColumn}>
+              <span className={sheetSection}>View</span>
+              <div className={sheetRow}>
+                <span className={sheetRowLabel}>Leaf tasks</span>
+                <Switch
+                  checked={showLeaves}
+                  onCheckedChange={setShowLeaves}
+                  aria-label="Branch each goal out into its leaf tasks"
+                />
+              </div>
+              <div className={sheetRow}>
+                <span className={sheetRowLabel}>Hide empty</span>
+                <Switch
+                  checked={hideEmpty}
+                  onCheckedChange={setHideEmpty}
+                  aria-label="Hide roles and categories with no items"
+                />
+              </div>
+              <div className={sheetRow}>
+                <span className={sheetRowLabel}>Show completed</span>
+                <Switch
+                  checked={showCompleted}
+                  onCheckedChange={setShowCompleted}
+                  aria-label="Show completed items"
+                />
+              </div>
+              <div className={sheetRow}>
+                <span className={sheetRowLabel}>Zoom</span>
+                <div className={sheetZoomTrack}>
+                  <div className={zoomTrackBar} />
+                  <div
+                    className={zoomFill}
+                    style={{
+                      width: `calc(${zoom}% + ${(SLIDER_THUMB_PX * (50 - zoom)) / 100}px)`,
+                    }}
+                  />
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={zoom}
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    className={zoomSlider}
+                    aria-label="Zoom mindmap"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-          <span className={sheetSection}>Layout</span>
-          <MindmapControlsBody
-            options={layoutOptions}
-            onChange={patchLayoutOptions}
-          />
-          <div className={sheetHint}>
-            Pinch to zoom · Tap to focus · Tap Open to navigate
+            <div className={sheetColumn}>
+              <span className={sheetSection}>Layout</span>
+              <MindmapControlsBody
+                options={layoutOptions}
+                onChange={patchLayoutOptions}
+              />
+              <div className={sheetHint}>
+                Pinch to zoom · Tap to focus · Tap Open to navigate
+              </div>
+              <div className={sheetRow}>
+                <Button variant="ghost" size="sm" onClick={resetView}>
+                  Reset view
+                </Button>
+              </div>
+            </div>
           </div>
         </BottomSheet>
       )}

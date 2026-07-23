@@ -3,10 +3,14 @@ import { vars } from "@/lib/theme/tokens.css";
 import { space } from "@/lib/theme/scales";
 import { text } from "@/lib/theme/typography.css";
 
+// Full-width row under the grid: override toggle, picker, and the goal-only
+// reset action sit side by side, wrapping on narrow viewports.
 export const placeRow = style({
   display: "flex",
-  alignItems: "top",
+  alignItems: "center",
+  flexWrap: "wrap",
   gap: space["2.5"],
+  rowGap: space["2"],
 });
 
 // Reserves a fixed line so the "from {category}" hint can toggle visibility

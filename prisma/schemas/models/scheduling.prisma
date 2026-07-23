@@ -5,6 +5,8 @@ model UserSchedulingPreferences {
   bufferTimeMinutes    Int           @default(10) // Minimum buffer time between scheduled items
   defaultTransportMode TransportMode @default(DRIVING) // Default transport mode for travel time calculations
   weekStartDay         Int           @default(1) // 0=Sunday .. 6=Saturday; first day of the calendar week
+  lastTravelRefreshAt  DateTime? // Mode-independent cooldown stamp for refreshAllTravelTimes
+  lastTravelTopUpAt    DateTime? // Daily stamp for the silent background top-up (per user, not per session)
   createdAt            DateTime      @default(now())
   updatedAt            DateTime      @updatedAt
 

@@ -83,6 +83,7 @@ export function handlePlannerChanges(
             cast: "text",
             extract: (r) => r.linkedItemId,
           },
+          { name: "notes", cast: "text", extract: (r) => r.notes },
           {
             name: "sortOrder",
             cast: "double precision",

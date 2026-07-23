@@ -3,7 +3,14 @@
 import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Check, SquarePen } from "lucide-react";
-import { Button, Caption, Input, Loader } from "@/components/ui";
+import {
+  Button,
+  Caption,
+  Input,
+  Loader,
+  usePreviousPathname,
+} from "@/components/ui";
+import { NAV_ITEMS } from "@/components/ui/shell/nav";
 import { space, vars, interactiveTransition } from "@/lib/theme";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
@@ -51,7 +58,9 @@ import {
   readyCluster,
   readyHint,
   tabBodyWrap,
+  deleteDock,
 } from "./ItemDetailLayout.css";
+import { DeleteRow } from "../DeleteRow";
 
 export default function ItemDetailLayout({
   children,
@@ -79,6 +88,23 @@ export default function ItemDetailLayout({
   );
   const [editingTitle, setEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
+
+  // Back where you came from (calendar, dashboard, search target, ...) when
+  // the previous route is a labeled nav surface; Library otherwise — matching
+  // the canvas-route back button's tracked-route-over-router.back() rationale.
+  const previousPathname = usePreviousPathname();
+  const backTarget = useMemo(() => {
+    if (previousPathname && !previousPathname.startsWith("/items")) {
+      const nav = NAV_ITEMS.find(
+        (n) =>
+          n.href !== null &&
+          (previousPathname === n.href ||
+            previousPathname.startsWith(`${n.href}/`)),
+      );
+      if (nav) return { href: previousPathname, label: nav.label };
+    }
+    return { href: "/library", label: "Library" };
+  }, [previousPathname]);
 
   const item = useMemo(
     () => planner.find((p) => p.id === itemId),
@@ -124,7 +150,6 @@ export default function ItemDetailLayout({
 
   const handlers = useItemHandlers(
     item,
-    subtasks,
     planner,
     updatePlannerArray,
     updateAll,
@@ -135,8 +160,6 @@ export default function ItemDetailLayout({
   const {
     showDeleteConfirm,
     setShowDeleteConfirm,
-    showCascadeConfirm,
-    pendingLocationId,
     locationOverrideEnabled,
     handleSaveTitle,
     handleToggleReady,
@@ -149,8 +172,6 @@ export default function ItemDetailLayout({
     showResetLocationsConfirm,
     setShowResetLocationsConfirm,
     confirmResetSubgoalLocations,
-    applyLocationChange,
-    closeCascadeDialog,
   } = handlers;
 
   const handleDelete = () => {
@@ -211,10 +232,10 @@ export default function ItemDetailLayout({
             <button
               type="button"
               className={backLink}
-              onClick={() => router.push("/library")}
+              onClick={() => router.push(backTarget.href)}
             >
               <ArrowLeft size={12} strokeWidth={2.4} />
-              Library
+              {backTarget.label}
             </button>
             <p style={{ marginTop: space["3.5"] }}>
               <Caption>Item not found.</Caption>
@@ -423,10 +444,10 @@ export default function ItemDetailLayout({
                 <button
                   type="button"
                   className={backLink}
-                  onClick={() => router.push("/library")}
+                  onClick={() => router.push(backTarget.href)}
                 >
                   <ArrowLeft size={12} strokeWidth={2.4} />
-                  Library
+                  {backTarget.label}
                 </button>
               </div>
 
@@ -521,6 +542,9 @@ export default function ItemDetailLayout({
               />
 
               <div className={tabBodyWrap}>{children}</div>
+              <div className={deleteDock}>
+                <DeleteRow />
+              </div>
             </div>
           </div>
 
@@ -544,31 +568,6 @@ export default function ItemDetailLayout({
             tone="danger"
             onCancel={() => setShowDeleteConfirm(false)}
             onConfirm={handleDelete}
-          />
-
-          <ConfirmModal
-            open={showCascadeConfirm}
-            title="Apply to subtasks?"
-            body="Apply this location change to all subtasks of this goal, or just to this item?"
-            confirmLabel="All subtasks"
-            cancelLabel="Cancel"
-            extraActions={
-              <Button
-                variant="glass"
-                size="sm"
-                onClick={() => {
-                  applyLocationChange(pendingLocationId, false);
-                  closeCascadeDialog();
-                }}
-              >
-                This item only
-              </Button>
-            }
-            onCancel={closeCascadeDialog}
-            onConfirm={() => {
-              applyLocationChange(pendingLocationId, true);
-              closeCascadeDialog();
-            }}
           />
 
           <ConfirmModal

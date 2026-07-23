@@ -1,6 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
-import { space } from "@/lib/theme/scales";
+import { space, media } from "@/lib/theme/scales";
 import { text } from "@/lib/theme/typography.css";
 import { themeTransition } from "@/lib/theme/transitions";
 
@@ -31,6 +31,9 @@ export const tab = style([
       "&:hover": {
         color: vars.ink,
       },
+    },
+    "@media": {
+      [media.mobile]: { padding: "8px 10px" },
     },
   },
 ]);

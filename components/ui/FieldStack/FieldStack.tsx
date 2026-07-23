@@ -45,7 +45,7 @@ export function FieldStack({
         pointerEvents: disabled ? "none" : "all",
       }}
     >
-      {label ?? <span className={fieldLabel[size]}>{label}</span>}
+      {label != null && <span className={fieldLabel[size]}>{label}</span>}
       {children}
     </div>
   );

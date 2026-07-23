@@ -43,12 +43,17 @@ const HEADER_OVERLAY_BASE = {
 const headerCellBase = style({
   padding: "10px 12px",
   borderBottom: `1px solid ${vars.glass.stroke}`,
-  background: vars.paper,
+  // surface.content, not paper: dark-mode paper is darker than the page
+  // surface, so the sticky header/rail cells read as dark bands.
+  background: vars.surface.content,
   textAlign: "center",
   verticalAlign: "middle",
   minWidth: 96,
   position: "sticky",
-  top: 0,
+  // -1px, not 0: at fractional scroll offsets the browser can paint a stuck
+  // header a sub-pixel low, letting a hairline of the scrolled rows shine
+  // through above it. Overshooting by a pixel clips 1px of padding instead.
+  top: -1,
   zIndex: 2,
   transition: themeTransition,
   selectors: {
@@ -71,7 +76,7 @@ export const cornerCell = style([
   fieldLabel,
   {
     borderRight: `1px solid ${vars.glass.stroke}`,
-    left: 0,
+    left: -1,
     zIndex: 3,
   },
 ]);
@@ -91,12 +96,12 @@ export const rowHeaderCell = style({
   padding: "10px 12px",
   borderTop: `1px solid ${vars.glass.stroke}`,
   borderRight: `1px solid ${vars.glass.stroke}`,
-  background: vars.paper,
+  background: vars.surface.content,
   fontWeight: 600,
   textAlign: "center",
   verticalAlign: "middle",
   position: "sticky",
-  left: 0,
+  left: -1,
   zIndex: 1,
   transition: themeTransition,
   selectors: {

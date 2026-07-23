@@ -146,6 +146,8 @@ export enum SchedulingFailureReason {
   TOO_LARGE = "TOO_LARGE",
   /** No available time slots found within search window */
   NO_SLOTS = "NO_SLOTS",
+  /** Allowed times and eligible category windows never coincide in any week */
+  IMPOSSIBLE_CONSTRAINTS = "IMPOSSIBLE_CONSTRAINTS",
   /** Algorithm exceeded maximum iteration count */
   ITERATION_LIMIT = "ITERATION_LIMIT",
   /** Task dependencies prevent scheduling at this time */

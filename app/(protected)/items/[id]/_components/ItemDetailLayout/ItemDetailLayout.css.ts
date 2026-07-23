@@ -1,10 +1,14 @@
 ﻿import { style } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
 import { space, contentWidth, media } from "@/lib/theme/scales";
+import { CORNER_ACTION_GUTTER } from "@/components/ui/shell/CornerActions/constants";
 import { iconBtn } from "@/lib/theme/recipes.css";
 import { display, text, caption } from "@/lib/theme/typography.css";
-import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
-
+import {
+  themeTransition,
+  interactiveTransition,
+} from "@/lib/theme/transitions";
+import { zIndex } from "@/lib/theme/scales";
 
 export const page = style({
   position: "relative",
@@ -15,8 +19,9 @@ export const page = style({
   overflow: "hidden",
 });
 
-// Owns the scroll so that overlays anchored to `.page` (AIDraftModal) don't
-// scroll away with the content underneath.
+// Mobile-only scroller (desktop content is height-locked and scrolls inside
+// each tab instead). Kept above `.page`-anchored overlays (AIDraftModal) so
+// they don't scroll away with the content underneath.
 export const scrollArea = style({
   display: "flex",
   flexDirection: "column",
@@ -25,9 +30,13 @@ export const scrollArea = style({
   overflow: "auto",
 });
 
+// Desktop: a height-locked frame — back row, title, tabs, and delete dock are
+// static; each tab page owns its own scroll region inside tabBodyWrap. Mobile
+// drops the lock so the whole page scrolls naturally in scrollArea.
 export const innerWrap = style({
   display: "flex",
   flexDirection: "column",
+  overflow: "hidden",
   padding: "20px 56px 28px",
   width: "100%",
   maxWidth: contentWidth.xl,
@@ -35,14 +44,21 @@ export const innerWrap = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [media.mobile]: { padding: "16px 16px 24px" },
+    [media.mobile]: { padding: "16px 16px 24px", overflow: "visible" },
   },
 });
 
+// Portrait mobile reserves the corner-search pill's footprint so the back
+// link doesn't sit under it; landscape phones fold the pills into the bottom
+// bar (PageHeader precedent), freeing the top again.
 export const backRow = style({
   display: "flex",
   alignItems: "center",
   paddingBottom: space["1.5"],
+  "@media": {
+    [media.mobile]: { paddingLeft: CORNER_ACTION_GUTTER },
+    [media.landscapePhone]: { paddingLeft: 0 },
+  },
 });
 
 export const backLink = style([
@@ -184,4 +200,26 @@ export const tabBodyWrap = style({
   flexDirection: "column",
   flex: 1,
   minHeight: 0,
+  "@media": {
+    [media.mobile]: { flex: "1 0 auto" },
+  },
+});
+
+// Pinned to the frame bottom on desktop (the height-locked innerWrap plus
+// marginTop auto); flows after the content on mobile's natural page scroll.
+// The negative bottom margin mirrors innerWrap's bottom padding so the dock
+// sits flush with the scrollport edge instead of floating 28px above it.
+export const deleteDock = style({
+  marginTop: "auto",
+  marginBottom: `-${space["7"]}px`,
+  backgroundColor: vars.surface.content,
+  flexShrink: 0,
+  zIndex: zIndex.docked,
+  borderTop: `1px solid ${vars.rule}`,
+  paddingTop: space["2.5"],
+  paddingBottom: space["2.5"],
+  transition: themeTransition,
+  "@media": {
+    [media.mobile]: { marginBottom: `-${space["6"]}px` },
+  },
 });

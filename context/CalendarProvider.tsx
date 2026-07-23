@@ -22,6 +22,7 @@ import {
   TravelEvent,
   Queue,
   PlannerDependency,
+  EngineMessage,
 } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
@@ -32,11 +33,17 @@ import useCalendarStateActions, {
 } from "@/hooks/useCalendarStateActions";
 import useManuallyRefreshCalendar from "@/hooks/useManuallyRefreshCalendar";
 import useCalendarServerSync from "@/hooks/useCalendarServerSync";
-import type {
-  SerializedLocation,
-  SerializedTravelTime,
+import {
+  setAllTravelTimes,
+  type SerializedLocation,
+  type SerializedTravelTime,
 } from "@/redux/slices/schedulingSettingsSlice";
-import { buildInheritedLocationMap, InheritedLocationInfo } from "@/utils/goalPageHandlers";
+import * as locationActions from "@/actions/locations";
+import { serializeTravelTime } from "@/utils/locations";
+import {
+  buildInheritedLocationMap,
+  InheritedLocationInfo,
+} from "@/utils/goalPageHandlers";
 import {
   buildQueueCategoryByRootId,
   buildQueueByPlannerId,
@@ -54,11 +61,13 @@ type CalendarContextType = {
   calendar: SimpleEvent[];
   template: EventTemplate[];
   categories: Category[];
+  calendarEvents: SimpleEvent[];
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
   queues: Queue[];
   dependencies: PlannerDependency[];
   locations: SerializedLocation[];
+  engineMessages: EngineMessage[];
   updatePlannerArray: (
     planner: Planner[] | ((prev: Planner[]) => Planner[]),
     options?: CalendarUpdateOptions,
@@ -130,16 +139,16 @@ export default function CalendarProvider({
   // Field-level subscriptions instead of whole-slice: a write to a field the
   // provider doesn't read (e.g. plannerScores after an engine run) no longer
   // re-renders the provider tree.
-  const planner = useSelector((state: RootState) => state.calendarSource.planner);
+  const planner = useSelector(
+    (state: RootState) => state.calendarSource.planner,
+  );
   const template = useSelector(
     (state: RootState) => state.calendarSource.template,
   );
   const categories = useSelector(
     (state: RootState) => state.calendarSource.categories,
   );
-  const queues = useSelector(
-    (state: RootState) => state.calendarSource.queues,
-  );
+  const queues = useSelector((state: RootState) => state.calendarSource.queues);
   const dependencies = useSelector(
     (state: RootState) => state.calendarSource.dependencies,
   );
@@ -149,6 +158,10 @@ export default function CalendarProvider({
   const calendar = useSelector(
     (state: RootState) => state.engineOutput.calendar,
   );
+  const calendarEvents = useSelector(
+    (state: RootState) => state.engineOutput.calendar,
+  );
+
   const categoryEvents = useSelector(
     (state: RootState) => state.engineOutput.categoryEvents,
   );
@@ -177,14 +190,14 @@ export default function CalendarProvider({
     userId,
     { planner, calendar, template, categories },
     weekStartDay,
-    dispatch
+    dispatch,
   );
 
   const bufferTimeMinutes = useSelector(
-    (state: RootState) => state.schedulingSettings.bufferTimeMinutes
+    (state: RootState) => state.schedulingSettings.bufferTimeMinutes,
   );
   const locations = useSelector(
-    (state: RootState) => state.schedulingSettings.locations
+    (state: RootState) => state.schedulingSettings.locations,
   );
   const travelTimes = useSelector(
     (state: RootState) => state.schedulingSettings.allTravelTimes,
@@ -293,6 +306,29 @@ export default function CalendarProvider({
 
   useFetchCalendarData(userId, initializeState);
 
+  // Capped background refresh of TTL-aged travel times, once per app load.
+  // Silent and best-effort: the action bounds what a single session may spend
+  // (STALE_TOP_UP_MAX_PAIRS), so a long-dormant cache tops up incrementally
+  // across sessions rather than in one large unconfirmed refetch.
+  const staleTopUpFired = useRef(false);
+  useEffect(() => {
+    if (!isCalendarLoaded || !userId || staleTopUpFired.current) return;
+    staleTopUpFired.current = true;
+    void (async () => {
+      try {
+        const result =
+          await locationActions.topUpStaleTravelTimes(defaultTransportMode);
+        if (result.refreshed === 0 && result.failed === 0) return;
+        const fresh = await locationActions.fetchTravelTimes();
+        const serialized = fresh.map(serializeTravelTime);
+        dispatch(setAllTravelTimes(serialized));
+        markSynced("travelTimes", serialized);
+      } catch {
+        // Stale values keep working until the next session's attempt.
+      }
+    })();
+  }, [isCalendarLoaded, userId, defaultTransportMode, dispatch, markSynced]);
+
   const queueCategoryByRootId = useMemo(
     () => buildQueueCategoryByRootId(queues),
     [queues],
@@ -309,7 +345,7 @@ export default function CalendarProvider({
         locations,
         queueCategoryByRootId,
       ),
-    [planner, categories, locations, queueCategoryByRootId]
+    [planner, categories, locations, queueCategoryByRootId],
   );
 
   // Memoized so a provider re-render (any calendar-slice write) only reaches
@@ -325,6 +361,7 @@ export default function CalendarProvider({
             weekStartDay,
             planner,
             calendar,
+            calendarEvents,
             template,
             categories,
             categoryEvents,
@@ -332,6 +369,7 @@ export default function CalendarProvider({
             queues,
             dependencies,
             locations,
+            engineMessages,
             updatePlannerArray,
             updateTemplateArray,
             updateQueueArray,
@@ -357,6 +395,7 @@ export default function CalendarProvider({
       queues,
       dependencies,
       locations,
+      engineMessages,
       updatePlannerArray,
       updateTemplateArray,
       updateQueueArray,
@@ -383,7 +422,7 @@ export function useCalendarProvider() {
   const context = useContext(CalendarContext);
   if (!context) {
     throw new Error(
-      "useCalendarProvider must be used within a CalendarProvider"
+      "useCalendarProvider must be used within a CalendarProvider",
     );
   }
   return context;

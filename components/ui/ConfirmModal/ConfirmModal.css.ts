@@ -1,6 +1,6 @@
-import { style } from "@vanilla-extract/css";
+import { globalStyle, style } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
-import { space } from "@/lib/theme/scales";
+import { media, space } from "@/lib/theme/scales";
 import { popover } from "@/lib/theme/recipes.css";
 import { backdropFilters } from "@/lib/theme/effects";
 import { themeTransition } from "@/lib/theme/transitions";
@@ -41,6 +41,26 @@ export const modal = style([
         transform: "translate(-50%, -50%) scale(1)",
       },
     },
+    // Mobile presents as a bottom sheet: docked to the bottom edge, full
+    // width, sliding up — matching the shared BottomSheet language.
+    "@media": {
+      [media.mobile]: {
+        top: "auto",
+        bottom: 0,
+        left: 0,
+        width: "100%",
+        maxHeight: ["85vh", "85dvh"],
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
+        padding: "18px 16px calc(20px + env(safe-area-inset-bottom))",
+        transform: "translateY(16px)",
+        selectors: {
+          "&[data-state='open']": {
+            transform: "translateY(0)",
+          },
+        },
+      },
+    },
   },
 ]);
 
@@ -70,4 +90,31 @@ export const modalActions = style({
   gap: space["2"],
   marginTop: space["6"],
   flexWrap: "wrap",
+  // Mobile stacks the actions full width — three sm pills in a row wrap
+  // awkwardly and make poor touch targets.
+  "@media": {
+    [media.mobile]: {
+      flexDirection: "column",
+      alignItems: "stretch",
+      gap: space["2"],
+    },
+  },
+});
+
+// Cancel drops below the real choices in the mobile stack (row order keeps
+// it between them on desktop).
+export const modalCancel = style({
+  "@media": {
+    [media.mobile]: { order: 99 },
+  },
+});
+
+globalStyle(`${modalActions} > *`, {
+  "@media": {
+    [media.mobile]: {
+      width: "100%",
+      justifyContent: "center",
+      minHeight: 44,
+    },
+  },
 });

@@ -1,20 +1,17 @@
 "use client";
 
+import { FieldStack } from "@/components/ui";
 import { PRIORITY_LEVELS } from "@/utils/plannerPriority";
 import { useItem } from "../../ItemContext";
-import {
-  cardHeader,
-  cardTitle,
-  priorityRow,
-  priorityPill,
-} from "./PrioritySection.css";
+import { priorityRow, priorityPill } from "./PrioritySection.css";
 
+// Plans are fixed-time — the engine never scores them, so the field ghosts
+// instead of unmounting (keeps the grid stable across type switches).
 export function PrioritySection() {
   const { item, updateField } = useItem();
 
   return (
-    <div className={cardHeader}>
-      <span className={cardTitle}>Priority</span>
+    <FieldStack label="Priority" disabled={item.plannerType === "plan"}>
       <div className={priorityRow}>
         {PRIORITY_LEVELS.map((p) => (
           <button
@@ -29,6 +26,6 @@ export function PrioritySection() {
           </button>
         ))}
       </div>
-    </div>
+    </FieldStack>
   );
 }

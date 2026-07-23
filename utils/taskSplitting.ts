@@ -34,6 +34,21 @@ export interface CompletedSegment {
 // geometry helpers preserve; a chunk below it could never be placed.
 export const MIN_CHUNK_MINUTES = 5;
 
+// maxMinutes 0 is the "no upper bound" sentinel (a real 0-minute chunk is
+// meaningless): chunks are bounded below by minMinutes only and grow to fill
+// whatever headroom the selected slot offers.
+export const SPLIT_MAX_UNLIMITED = 0;
+
+export function splitMaxIsUnlimited(settings: TaskSplittingSettings): boolean {
+  return settings.maxMinutes === SPLIT_MAX_UNLIMITED;
+}
+
+export function effectiveMaxChunkMinutes(
+  settings: TaskSplittingSettings,
+): number {
+  return splitMaxIsUnlimited(settings) ? Infinity : settings.maxMinutes;
+}
+
 const CHUNK_ID_MARKER = "|chunk:";
 const SEGMENT_ID_MARKER = "|done:";
 
@@ -51,7 +66,8 @@ export function normalizeTaskSplittingSettings(
       : null;
   const max =
     typeof parsed.maxMinutes === "number" ? Math.floor(parsed.maxMinutes) : null;
-  if (min === null || max === null || max < min) return null;
+  if (min === null || max === null) return null;
+  if (max !== SPLIT_MAX_UNLIMITED && max < min) return null;
   const perDay =
     typeof parsed.maxMinutesPerDay === "number" && parsed.maxMinutesPerDay > 0
       ? Math.max(Math.floor(parsed.maxMinutesPerDay), min)
@@ -211,7 +227,7 @@ export function grantChunkMinutes(args: {
   const { remaining, headroom, settings } = args;
   if (remaining <= 0) return 0;
   const minRequired = minChunkRequired(remaining, settings);
-  const maxBound = args.maxOverride ?? settings.maxMinutes;
+  const maxBound = args.maxOverride ?? effectiveMaxChunkMinutes(settings);
   let granted = Math.min(
     headroom,
     maxBound,

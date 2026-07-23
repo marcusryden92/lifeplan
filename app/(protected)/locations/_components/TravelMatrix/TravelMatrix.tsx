@@ -156,6 +156,29 @@ export function TravelMatrix({
                   );
                 }
 
+                if (tt.unroutable && !hasCustomOverride(tt)) {
+                  return (
+                    <td
+                      key={to.id}
+                      className={cell}
+                      data-trace={cellTrace(fromIdx, toIdx)}
+                      onMouseEnter={() => setHovered({ fromIdx, toIdx })}
+                    >
+                      <button
+                        type="button"
+                        className={cellButton}
+                        onClick={() => onEditPair(from.id, to.id)}
+                        title="Google found no route — set a custom time"
+                      >
+                        <div className={missingBlock}>
+                          <span className={missingLabel}>no route</span>
+                          <span className={missingHint}>set manually</span>
+                        </div>
+                      </button>
+                    </td>
+                  );
+                }
+
                 const rush = getEffectiveTravelTime(tt, "rush");
                 const reg = getEffectiveTravelTime(tt, "regular");
                 const night = getEffectiveTravelTime(tt, "night");

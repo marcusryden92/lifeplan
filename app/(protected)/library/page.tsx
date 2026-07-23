@@ -1,6 +1,6 @@
 "use client";
 
-import { space, listRow } from "@/lib/theme";
+import { space, listRow, iconBtn } from "@/lib/theme";
 import {
   useCallback,
   useEffect,
@@ -12,13 +12,6 @@ import { useRouter } from "next/navigation";
 import {
   Plus,
   Search,
-  Inbox,
-  Calendar,
-  CalendarDays,
-  AlertTriangle,
-  Target,
-  Flag,
-  CheckCircle2,
   Layers,
   ChevronLeft,
   ChevronUp,
@@ -31,13 +24,17 @@ import { useSelector } from "react-redux";
 import {
   Button,
   Caption,
+  Combobox,
   ConfirmModal,
   Input,
   Loader,
+  PageHeader,
+  ResponsiveSegmentedControl,
   Switch,
   vars,
 } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import type { RootState } from "@/redux/store";
 import {
   buildCategoryTree,
@@ -50,7 +47,7 @@ import {
   getRolledUpRemainingDuration,
 } from "@/utils/plannerStatus";
 import type { Category } from "@/types/prisma";
-import { SegmentedControl } from "@/components/ui";
+import { SMART_VIEWS } from "./_lib/smartViews";
 import {
   CategoryTreeNode,
   type Selection,
@@ -58,6 +55,7 @@ import {
 import { ItemRow } from "./_components/ItemRow";
 import { NewItemModal } from "./_components/NewItemModal";
 import { BulkActionBar } from "./_components/BulkActionBar";
+import { ScopeSheet } from "./_components/ScopeSheet";
 import {
   assignCategoryToSubtrees,
   deleteSubtrees,
@@ -66,9 +64,6 @@ import {
 } from "@/utils/plannerBulkActions";
 import {
   page,
-  subHeader,
-  pageTitle,
-  titleSummary,
   spacer,
   actionCluster,
   mainGrid,
@@ -92,6 +87,12 @@ import {
   breadcrumb,
   breadcrumbSep,
   breadcrumbCurrent,
+  scopeRow,
+  scopePill,
+  scopePillLabel,
+  scopePillCount,
+  scopePillChevron,
+  sortCluster,
   tableWrap,
   tableHead,
   cellCheck,
@@ -128,19 +129,15 @@ const DEFAULT_SORT_DIR: Record<SortKey, SortDir> = {
   category: "asc",
 };
 
-const SMART_VIEWS: Array<{
-  key: SmartView;
-  label: string;
-  icon: typeof Inbox;
-  alert?: boolean;
-}> = [
-  { key: "today", label: "Today", icon: Calendar },
-  { key: "this-week", label: "This week", icon: CalendarDays },
-  { key: "inbox", label: "Inbox", icon: Inbox },
-  { key: "overdue", label: "Overdue", icon: AlertTriangle, alert: true },
-  { key: "all-goals", label: "All goals", icon: Target },
-  { key: "all-plans", label: "All plans", icon: Flag },
-  { key: "done-7d", label: "Done · 7d", icon: CheckCircle2 },
+// Mobile sort control; "newest" stands in for the null sortKey (created-desc).
+const SORT_OPTIONS: Array<{ value: SortKey | "newest"; label: string }> = [
+  { value: "newest", label: "Newest" },
+  { value: "title", label: "Title" },
+  { value: "type", label: "Type" },
+  { value: "duration", label: "Duration" },
+  { value: "priority", label: "Priority" },
+  { value: "deadline", label: "Deadline" },
+  { value: "category", label: "Category" },
 ];
 
 function SortHeader({
@@ -180,15 +177,17 @@ function SortHeader({
 export default function LibraryPage() {
   const router = useRouter();
   const { planner, categories, updatePlannerArray } = useCalendarProvider();
-  const isLoaded = useSelector((state: RootState) => state.calendarSource.isLoaded);
+  const isLoaded = useSelector(
+    (state: RootState) => state.calendarSource.isLoaded,
+  );
   const now = useMemo(() => new Date(), []);
+  const isMobile = useIsMobile();
   const [newItemOpen, setNewItemOpen] = useState(false);
+  const [scopeSheetOpen, setScopeSheetOpen] = useState(false);
 
   const [selection, setSelection] = useState<Selection>({ kind: "all" });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [deleteTargetIds, setDeleteTargetIds] = useState<string[] | null>(
-    null,
-  );
+  const [deleteTargetIds, setDeleteTargetIds] = useState<string[] | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
@@ -519,12 +518,15 @@ export default function LibraryPage() {
       data-rail-collapsed={railCollapsed}
       data-no-transitions={railTransitionsReady ? undefined : "true"}
     >
-      <div className={subHeader}>
-        <h1 className={pageTitle}>Library</h1>
-        <span className={titleSummary}>
-          {planner.length} items · {categories.length} categor
-          {categories.length === 1 ? "y" : "ies"}
-        </span>
+      <PageHeader
+        title="Library"
+        summary={
+          <>
+            {planner.length} items · {categories.length} categor
+            {categories.length === 1 ? "y" : "ies"}
+          </>
+        }
+      >
         <span className={spacer} />
         <div className={actionCluster}>
           <Button
@@ -536,120 +538,152 @@ export default function LibraryPage() {
             New item
           </Button>
         </div>
-      </div>
+      </PageHeader>
 
       <div className={mainGrid}>
-        <aside className={rail}>
-          <div className={railHeader}>
-            <button
-              type="button"
-              className={railToggle}
-              onClick={() => setRailCollapsed((c) => !c)}
-              title={railCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              aria-label={railCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              aria-expanded={!railCollapsed}
-            >
-              <span className={railToggleIcon} aria-hidden>
-                <ChevronLeft size={16} strokeWidth={2} />
-              </span>
-            </button>
-          </div>
-          <div className={railSection}>
-            <div className={railSectionHead}>Smart views</div>
-            <button
-              className={`${listRow()} ${railRow} ${selection.kind === "all" ? railRowActive : ""}`}
-              onClick={() => setSelection({ kind: "all" })}
-            >
-              <span className={railRowIcon}>
-                <Layers size={13} strokeWidth={2} />
-              </span>
-              <span className={railRowLabel}>Browse all</span>
-              <span className={railRowCount}>{rootItems.length}</span>
-            </button>
-            {SMART_VIEWS.map((v) => {
-              const Icon = v.icon;
-              const count = smartViewCounts[v.key];
-              const active =
-                selection.kind === "view" && selection.view === v.key;
-              return (
-                <button
-                  key={v.key}
-                  className={`${listRow()} ${railRow} ${active ? railRowActive : ""}`}
-                  onClick={() => setSelection({ kind: "view", view: v.key })}
-                >
-                  <span className={railRowIcon}>
-                    <Icon size={13} strokeWidth={2} />
-                  </span>
-                  <span className={railRowLabel}>{v.label}</span>
-                  <span
-                    className={`${railRowCount} ${
-                      v.alert && count > 0 ? railRowCountAlert : ""
-                    }`}
-                  >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className={railSection}>
-            <div className={railSectionHead}>Categories</div>
-            {categoryTree.length === 0 ? (
-              <div
-                style={{
-                  padding: space["2"],
-                  fontSize: 12.5,
-                  color: vars.muted,
-                }}
+        {!isMobile && (
+          <aside className={rail}>
+            <div className={railHeader}>
+              <button
+                type="button"
+                className={railToggle}
+                onClick={() => setRailCollapsed((c) => !c)}
+                title={railCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                aria-label={
+                  railCollapsed ? "Expand sidebar" : "Collapse sidebar"
+                }
+                aria-expanded={!railCollapsed}
               >
-                <Caption>No categories yet</Caption>
-              </div>
-            ) : (
-              categoryTree.map((node) => (
-                <CategoryTreeNode
-                  key={node.id}
-                  node={node}
-                  depth={0}
-                  expanded={expanded}
-                  toggleExpand={toggleExpand}
-                  selection={selection}
-                  setSelection={setSelection}
-                  counts={categoryCounts}
-                />
-              ))
-            )}
-          </div>
-        </aside>
+                <span className={railToggleIcon} aria-hidden>
+                  <ChevronLeft size={16} strokeWidth={2} />
+                </span>
+              </button>
+            </div>
+            <div className={railSection}>
+              <div className={railSectionHead}>Smart views</div>
+              <button
+                className={`${listRow()} ${railRow} ${selection.kind === "all" ? railRowActive : ""}`}
+                onClick={() => setSelection({ kind: "all" })}
+              >
+                <span className={railRowIcon}>
+                  <Layers size={13} strokeWidth={2} />
+                </span>
+                <span className={railRowLabel}>Browse all</span>
+                <span className={railRowCount}>{rootItems.length}</span>
+              </button>
+              {SMART_VIEWS.map((v) => {
+                const Icon = v.icon;
+                const count = smartViewCounts[v.key];
+                const active =
+                  selection.kind === "view" && selection.view === v.key;
+                return (
+                  <button
+                    key={v.key}
+                    className={`${listRow()} ${railRow} ${active ? railRowActive : ""}`}
+                    onClick={() => setSelection({ kind: "view", view: v.key })}
+                  >
+                    <span className={railRowIcon}>
+                      <Icon size={13} strokeWidth={2} />
+                    </span>
+                    <span className={railRowLabel}>{v.label}</span>
+                    <span
+                      className={`${railRowCount} ${
+                        v.alert && count > 0 ? railRowCountAlert : ""
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
 
-        <section className={mainCard}>
-          <div className={breadcrumb}>
-            <span>Library</span>
-            {breadcrumbCrumbs.map((label, i) => {
-              const isLast = i === breadcrumbCrumbs.length - 1;
-              return (
-                <span
-                  key={i}
+            <div className={railSection}>
+              <div className={railSectionHead}>Categories</div>
+              {categoryTree.length === 0 ? (
+                <div
                   style={{
-                    display: "inline-flex",
-                    gap: space["2"],
-                    alignItems: "center",
+                    padding: space["2"],
+                    fontSize: 12.5,
+                    color: vars.muted,
                   }}
                 >
-                  <span className={breadcrumbSep}>›</span>
-                  <span className={isLast ? breadcrumbCurrent : undefined}>
-                    {label}
-                  </span>
+                  <Caption>No categories yet</Caption>
+                </div>
+              ) : (
+                categoryTree.map((node) => (
+                  <CategoryTreeNode
+                    key={node.id}
+                    node={node}
+                    depth={0}
+                    expanded={expanded}
+                    toggleExpand={toggleExpand}
+                    selection={selection}
+                    setSelection={setSelection}
+                    counts={categoryCounts}
+                  />
+                ))
+              )}
+            </div>
+          </aside>
+        )}
+
+        <section className={mainCard}>
+          {isMobile ? (
+            <div className={scopeRow}>
+              <button
+                type="button"
+                className={scopePill}
+                onClick={() => setScopeSheetOpen(true)}
+                aria-haspopup="dialog"
+              >
+                <span className={scopePillLabel}>
+                  {breadcrumbCrumbs.join(" › ")}
                 </span>
-              );
-            })}
-          </div>
+                <span className={scopePillCount}>{filteredItems.length}</span>
+                <span className={scopePillChevron} aria-hidden>
+                  <ChevronDown size={14} strokeWidth={2.2} />
+                </span>
+              </button>
+              <Button
+                variant="solid"
+                size="sm"
+                onClick={() => setNewItemOpen(true)}
+              >
+                <Plus size={13} strokeWidth={2.4} />
+                New item
+              </Button>
+            </div>
+          ) : (
+            <div className={breadcrumb}>
+              <span>Library</span>
+              {breadcrumbCrumbs.map((label, i) => {
+                const isLast = i === breadcrumbCrumbs.length - 1;
+                return (
+                  <span
+                    key={i}
+                    style={{
+                      display: "inline-flex",
+                      gap: space["2"],
+                      alignItems: "center",
+                    }}
+                  >
+                    <span className={breadcrumbSep}>›</span>
+                    <span className={isLast ? breadcrumbCurrent : undefined}>
+                      {label}
+                    </span>
+                  </span>
+                );
+              })}
+            </div>
+          )}
 
           <div className={filterStrip}>
             <div className={filterRow}>
-              <SegmentedControl<TypeFilter>
+              <ResponsiveSegmentedControl<TypeFilter>
                 value={typeFilter}
                 onChange={setTypeFilter}
+                ariaLabel="Filter by type"
                 options={[
                   { key: "all", label: "All" },
                   { key: "task", label: "Task" },
@@ -658,9 +692,10 @@ export default function LibraryPage() {
                 ]}
               />
 
-              <SegmentedControl<Readiness>
+              <ResponsiveSegmentedControl<Readiness>
                 value={readiness}
                 onChange={setReadiness}
+                ariaLabel="Filter by readiness"
                 options={[
                   { key: "all", label: "All" },
                   { key: "ready", label: "Ready" },
@@ -694,6 +729,44 @@ export default function LibraryPage() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
+              {isMobile && (
+                <div className={sortCluster}>
+                  <Combobox<SortKey | "newest">
+                    value={sortKey ?? "newest"}
+                    options={SORT_OPTIONS}
+                    onChange={(v) => {
+                      if (v === "newest") {
+                        setSortKey(null);
+                      } else {
+                        setSortKey(v);
+                        setSortDir(DEFAULT_SORT_DIR[v]);
+                      }
+                    }}
+                    ariaLabel="Sort by"
+                    small
+                  />
+                  {sortKey !== null && (
+                    <button
+                      type="button"
+                      className={iconBtn({ size: "sm" })}
+                      onClick={() =>
+                        setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+                      }
+                      aria-label={
+                        sortDir === "asc"
+                          ? "Sorted ascending — switch to descending"
+                          : "Sorted descending — switch to ascending"
+                      }
+                    >
+                      {sortDir === "asc" ? (
+                        <ChevronUp size={14} strokeWidth={2.2} />
+                      ) : (
+                        <ChevronDown size={14} strokeWidth={2.2} />
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -719,81 +792,83 @@ export default function LibraryPage() {
             </div>
           ) : (
             <div className={tableWrap}>
-              <div className={tableHead}>
-                <span className={cellCheck}>
-                  <button
-                    type="button"
-                    role="checkbox"
-                    aria-checked={
-                      allVisibleSelected
-                        ? true
-                        : someVisibleSelected
-                          ? "mixed"
-                          : false
-                    }
-                    aria-label="Select all"
-                    data-checked={
-                      allVisibleSelected
-                        ? "true"
-                        : someVisibleSelected
-                          ? "mixed"
-                          : undefined
-                    }
-                    className={rowCheckbox}
-                    onClick={toggleSelectAll}
-                  >
-                    {allVisibleSelected ? (
-                      <Check size={11} strokeWidth={3} aria-hidden />
-                    ) : someVisibleSelected ? (
-                      <Minus size={11} strokeWidth={3} aria-hidden />
-                    ) : null}
-                  </button>
-                </span>
-                <SortHeader
-                  k="title"
-                  label="Title"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onSort={onSort}
-                />
-                <SortHeader
-                  k="type"
-                  label="Type"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onSort={onSort}
-                />
-                <SortHeader
-                  k="duration"
-                  label="Duration"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onSort={onSort}
-                />
-                <SortHeader
-                  k="priority"
-                  label="Priority"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onSort={onSort}
-                />
-                <SortHeader
-                  k="deadline"
-                  label="Deadline"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onSort={onSort}
-                />
-                <SortHeader
-                  k="category"
-                  label="Category"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onSort={onSort}
-                />
-                <span className={headerCell}>Status</span>
-                <span />
-              </div>
+              {!isMobile && (
+                <div className={tableHead}>
+                  <span className={cellCheck}>
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={
+                        allVisibleSelected
+                          ? true
+                          : someVisibleSelected
+                            ? "mixed"
+                            : false
+                      }
+                      aria-label="Select all"
+                      data-checked={
+                        allVisibleSelected
+                          ? "true"
+                          : someVisibleSelected
+                            ? "mixed"
+                            : undefined
+                      }
+                      className={rowCheckbox}
+                      onClick={toggleSelectAll}
+                    >
+                      {allVisibleSelected ? (
+                        <Check size={11} strokeWidth={3} aria-hidden />
+                      ) : someVisibleSelected ? (
+                        <Minus size={11} strokeWidth={3} aria-hidden />
+                      ) : null}
+                    </button>
+                  </span>
+                  <SortHeader
+                    k="title"
+                    label="Title"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    k="type"
+                    label="Type"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    k="duration"
+                    label="Duration"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    k="priority"
+                    label="Priority"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    k="deadline"
+                    label="Deadline"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <SortHeader
+                    k="category"
+                    label="Category"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onSort={onSort}
+                  />
+                  <span className={headerCell}>Status</span>
+                  <span />
+                </div>
+              )}
               {filteredItems.map((item) => (
                 <ItemRow
                   key={item.id}
@@ -810,6 +885,7 @@ export default function LibraryPage() {
                   selected={selectedIds.has(item.id)}
                   onToggleSelect={() => toggleSelect(item.id)}
                   onDelete={() => setDeleteTargetIds([item.id])}
+                  mobile={isMobile}
                 />
               ))}
             </div>
@@ -826,6 +902,21 @@ export default function LibraryPage() {
           onSetPriority={handleSetPriority}
           onDelete={() => setDeleteTargetIds(selectedTargets)}
           onClear={() => setSelectedIds(new Set())}
+        />
+      )}
+
+      {isMobile && (
+        <ScopeSheet
+          open={scopeSheetOpen}
+          onOpenChange={setScopeSheetOpen}
+          selection={selection}
+          onSelect={setSelection}
+          rootItemCount={rootItems.length}
+          smartViewCounts={smartViewCounts}
+          categoryTree={categoryTree}
+          categoryCounts={categoryCounts}
+          expanded={expanded}
+          toggleExpand={toggleExpand}
         />
       )}
 

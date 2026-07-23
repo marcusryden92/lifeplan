@@ -102,6 +102,7 @@ export function LocationSection() {
           options={locationOptions}
           onChange={(v) => changeLocation(v)}
           disabled={dropdownDisabled}
+          maxWidth={280}
           renderValue={(opt) => {
             if (currentLocation) {
               return (
@@ -136,8 +137,14 @@ export function LocationSection() {
             disabled={!isGoal}
             className={flushLeftBtn}
           >
-            <RotateCcw size={11} strokeWidth={2.2} />
-            Reset sub-goal places
+            <span>
+              <RotateCcw
+                size={11}
+                strokeWidth={2.2}
+                style={{ marginRight: space["1"] }}
+              />
+              {" Reset sub-goal places"}{" "}
+            </span>
           </Button>
         </div>
       </div>

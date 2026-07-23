@@ -1,9 +1,13 @@
-import { style } from "@vanilla-extract/css";
+import { style, globalStyle } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
 import { space, radii, media, zIndex } from "@/lib/theme/scales";
 import { text } from "@/lib/theme/typography.css";
 import { themeTransition } from "@/lib/theme/transitions";
 
+// On mobile the floating menu steps aside while the bar is up (the bar's
+// useShellOverlay registration), so the bar takes the menu's spot at the
+// bottom instead of stacking above it. Buttons collapse to icons in portrait
+// (btnLabel below); the wide-but-short landscape phone has room for labels.
 export const bar = style({
   position: "fixed",
   bottom: 20,
@@ -23,10 +27,37 @@ export const bar = style({
   maxWidth: "calc(100vw - 24px)",
   "@media": {
     [media.mobile]: {
-      bottom: 84,
-      flexWrap: "wrap",
-      justifyContent: "center",
-      borderRadius: radii["xl"],
+      bottom: 12,
+      padding: "8px 10px",
+    },
+  },
+});
+
+// Portrait mobile: icon-only pills would be ~25px tall at the recipe's sm
+// padding — pad them up to a real tap target. Landscape phones get labels
+// back but stay touch-sized, just slightly shorter to respect the short
+// viewport. Popover contents render in a portal, so this can't leak into
+// the menus.
+globalStyle(`${bar} button`, {
+  "@media": {
+    [media.mobile]: {
+      padding: "9px 11px",
+    },
+    [media.landscapePhone]: {
+      padding: "7px 13px",
+    },
+  },
+});
+
+// Button text, hidden in portrait mobile where all five actions won't fit a
+// single row with labels. Landscape phones are ~800px wide — labels return.
+export const btnLabel = style({
+  "@media": {
+    [media.mobile]: {
+      display: "none",
+    },
+    [media.landscapePhone]: {
+      display: "inline",
     },
   },
 });

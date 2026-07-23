@@ -27,6 +27,7 @@ function basePlanner(overrides: Partial<Planner>): Planner {
     useParentLocation: true,
     categoryId: null,
     linkedItemId: null,
+    notes: null,
     color: null,
     userId: "u1",
     createdAt: new Date().toISOString(),

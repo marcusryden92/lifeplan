@@ -3,6 +3,7 @@ import {
   serializeAllowedTimes,
   intersectIntervalWithAllowed,
   maxAllowedBlockMinutes,
+  maxConstrainedBlockMinutes,
   parseEarliestStartDate,
 } from "@/utils/allowedTimes";
 
@@ -224,6 +225,56 @@ describe("maxAllowedBlockMinutes", () => {
         { days: null, ranges: [{ startTime: "10:00", endTime: "12:00" }] },
       ]),
     ).toBe(120);
+  });
+});
+
+describe("maxConstrainedBlockMinutes", () => {
+  // CategoryTimeWindow convention: day 0=Sunday, so 1 = Monday.
+  const windowMonday = { day: 1, startTime: "09:00", endTime: "12:00" };
+
+  it("returns 0 when allowed days and window days are disjoint", () => {
+    expect(
+      maxConstrainedBlockMinutes([{ days: [2], ranges: null }], [windowMonday]),
+    ).toBe(0);
+  });
+
+  it("returns 0 for disjoint time-of-day ranges on a shared day", () => {
+    expect(
+      maxConstrainedBlockMinutes(
+        [{ days: null, ranges: [{ startTime: "14:00", endTime: "16:00" }] }],
+        [windowMonday],
+      ),
+    ).toBe(0);
+  });
+
+  it("measures the true weekly intersection", () => {
+    expect(
+      maxConstrainedBlockMinutes(
+        [{ days: [1], ranges: [{ startTime: "10:00", endTime: "14:00" }] }],
+        [windowMonday],
+      ),
+    ).toBe(120);
+  });
+
+  it("handles overnight windows across the day boundary", () => {
+    // Window Mon 22:00 -> Tue 02:00; allowed Tuesday only => Tue 00:00-02:00.
+    expect(
+      maxConstrainedBlockMinutes(
+        [{ days: [2], ranges: null }],
+        [{ day: 1, startTime: "22:00", endTime: "02:00" }],
+      ),
+    ).toBe(120);
+  });
+
+  it("matches maxAllowedBlockMinutes when no windows are supplied", () => {
+    expect(
+      maxConstrainedBlockMinutes([{ days: [1, 2], ranges: null }], null),
+    ).toBe(2 * 24 * 60);
+    expect(maxConstrainedBlockMinutes([], null)).toBe(Infinity);
+  });
+
+  it("bounds by windows alone when the chain is empty", () => {
+    expect(maxConstrainedBlockMinutes([], [windowMonday])).toBe(180);
   });
 });
 

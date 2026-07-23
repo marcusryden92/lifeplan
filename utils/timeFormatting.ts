@@ -45,7 +45,10 @@ export function formatLongDate(date: Date): string {
 // Short relative-day label for upcoming/past dates: "Today", "Tomorrow",
 // "Yesterday", "In 3d", "4d ago". Returns null for dates more than a week
 // out — callers fall back to the absolute date.
-export function relativeDayLabel(date: Date, now: Date = new Date()): string | null {
+export function relativeDayLabel(
+  date: Date,
+  now: Date = new Date(),
+): string | null {
   const dayStart = new Date(date);
   dayStart.setHours(0, 0, 0, 0);
   const todayStart = new Date(now);
@@ -76,4 +79,16 @@ export function greetingForHour(hour: number, name?: string | null): string {
             : "Good night";
   const firstName = name?.split(" ")[0]?.trim();
   return firstName ? `${period}, ${firstName}` : period;
+}
+// Compact relative timestamp for the console header. Null means the engine
+// hasn't run this session (cold load renders persisted output only).
+export function formatLastRun(iso: string | null): string {
+  if (!iso) return "—";
+  const deltaMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(deltaMs / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import * as locationActions from "@/actions/locations";
+import { v4 as uuidv4 } from "uuid";
 
 interface UseLocationModalStateArgs {
   open: boolean;
@@ -16,9 +16,10 @@ interface UseLocationModalStateResult {
   resetSignal: number;
 }
 
-// On every modal open (and whenever resetKey shifts), regenerates the Google
-// Places session token and emits a fresh `resetSignal` callers can hang their
-// own form-reset effects off of.
+// On every modal open (and whenever resetKey shifts), mints a fresh Google
+// Places session token and emits a `resetSignal` callers can hang their own
+// form-reset effects off of. The token rides every autocomplete request and is
+// redeemed by the Place Details call at save, closing the billing session.
 export function useLocationModalState({
   open,
   resetKey = null,
@@ -28,12 +29,8 @@ export function useLocationModalState({
 
   useEffect(() => {
     if (!open) return;
-    setSessionToken(null);
+    setSessionToken(uuidv4());
     setResetSignal((n) => n + 1);
-    locationActions
-      .createSessionToken()
-      .then(setSessionToken)
-      .catch(() => setSessionToken(null));
   }, [open, resetKey]);
 
   return { sessionToken, resetSignal };

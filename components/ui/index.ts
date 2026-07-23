@@ -32,6 +32,7 @@ export { TimePicker } from "./TimePicker";
 export type { TimePickerProps } from "./TimePicker";
 export { DurationField } from "./DurationField";
 export { CenteredLoader } from "./CenteredLoader";
+export { PageHeader } from "./PageHeader";
 export { StubPage } from "./StubPage";
 export {
   AppShell,

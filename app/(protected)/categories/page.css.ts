@@ -1,11 +1,13 @@
-﻿import { style, globalStyle } from "@vanilla-extract/css";
+﻿import { style, globalStyle, keyframes } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
 import { space, media, radii } from "@/lib/theme/scales";
 import { iconBtn } from "@/lib/theme/recipes.css";
-import { display, text, fieldLabel } from "@/lib/theme/typography.css";
+import { text, fieldLabel } from "@/lib/theme/typography.css";
 import { colorMixAlpha } from "@/lib/theme/effects";
-import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
-
+import {
+  themeTransition,
+  interactiveTransition,
+} from "@/lib/theme/transitions";
 
 export const page = style({
   position: "relative",
@@ -17,46 +19,17 @@ export const page = style({
     [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
+      selectors: {
+        // The WeekStructureModal fills this element (absolute inset 0); the
+        // mobile rail alone can be shorter than the viewport, which would
+        // crush the modal.
+        '&[data-windows-open="true"]': {
+          minHeight: "100dvh",
+        },
+      },
     },
   },
 });
-
-export const subHeader = style({
-  display: "flex",
-  alignItems: "baseline",
-  gap: space["3"],
-  padding: "20px 28px 18px",
-  flexShrink: 0,
-  "@media": {
-    [media.mobile]: {
-      padding: "16px 16px 12px",
-      flexWrap: "wrap",
-      gap: space["2.5"],
-    },
-  },
-});
-
-export const pageTitle = style([
-  display.pageTitle,
-  {
-    color: vars.ink,
-    lineHeight: 1,
-    margin: 0,
-    transition: themeTransition,
-    "@media": {
-      [media.mobile]: { fontSize: 24 },
-    },
-  },
-]);
-
-export const titleSummary = style([
-  text.bodySm,
-  {
-    color: vars.muted,
-    fontVariantNumeric: "tabular-nums",
-    transition: themeTransition,
-  },
-]);
 
 export const spacer = style({
   flex: 1,
@@ -150,6 +123,12 @@ export const railRow = style([
         background: vars.interactive.hoverFill,
       },
     },
+    "@media": {
+      [media.mobile]: {
+        minHeight: 44,
+        padding: "8px 8px",
+      },
+    },
   },
 ]);
 
@@ -194,24 +173,40 @@ export const railRowCount = style([
   },
 ]);
 
-// Drop-target visualization on the tree rows. "before"/"after" draw a 2px
-// accent line at the top/bottom of the row; "into" highlights the row body to
-// signal it'll become the drop target's parent.
+// Drop-target visualization, speaking the subtasks draggable's language
+// (lumenTasks draggableDropTarget). Folder semantics — no reorder, so no
+// divider lines: hovering a row tints it (it'll become the parent), and
+// hovering rail space outside any row lights the rail itself as the
+// "move to top level" target.
 globalStyle(`${railRow}[data-dragging="true"]`, {
+  background: vars.glass.bgSoft,
   opacity: 0.4,
+  transition: interactiveTransition("background-color", "opacity"),
 });
 
-globalStyle(`${railRow}[data-drag-over="before"]`, {
-  boxShadow: `inset 0 2px 0 0 ${vars.accent.primary}`,
+globalStyle(`${railRow}[data-drag-over="true"]`, {
+  background: `color-mix(in srgb, ${vars.accent.now} ${colorMixAlpha.hoverFill}%, transparent)`,
+  borderColor: `color-mix(in srgb, ${vars.accent.now} 65%, transparent)`,
+  transition: interactiveTransition("background-color", "border-color"),
 });
 
-globalStyle(`${railRow}[data-drag-over="after"]`, {
-  boxShadow: `inset 0 -2px 0 0 ${vars.accent.primary}`,
+globalStyle(`${rail}[data-drag-over-root="true"]`, {
+  borderColor: `color-mix(in srgb, ${vars.accent.now} 65%, transparent)`,
+  background: `color-mix(in srgb, ${vars.accent.now} ${colorMixAlpha.subtleFill}%, transparent)`,
+  transition: interactiveTransition("background-color", "border-color"),
 });
 
-globalStyle(`${railRow}[data-drag-over="into"]`, {
-  background: vars.glass.bgDeep,
-  borderColor: vars.accent.primary,
+// Post-drop landing feedback: the moved row glows at the drop-target tint
+// and fades, so it's findable wherever it landed in the tree.
+const dropFlash = keyframes({
+  "0%": {
+    background: `color-mix(in srgb, ${vars.accent.now} ${colorMixAlpha.hoverFill}%, transparent)`,
+  },
+  "100%": { background: "transparent" },
+});
+
+globalStyle(`${railRow}[data-dropped="true"]`, {
+  animation: `${dropFlash} 0.7s ease-out`,
 });
 
 export const railRowAddChild = style([
@@ -227,8 +222,76 @@ export const railRowAddChild = style([
         outline: `1px solid ${vars.accent.primary}`,
       },
     },
+    "@media": {
+      // No hover to reveal it on touch devices.
+      "(hover: none)": {
+        opacity: 1,
+      },
+    },
   },
 ]);
+
+// Reorder handle, subtasks gripBtn language: hidden until row hover on
+// pointer devices, always visible with a bigger hit box on touch. touchAction
+// none keeps the browser from claiming the gesture for scrolling.
+export const railRowGrip = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 22,
+  height: 26,
+  margin: "-4px 0 -4px -4px",
+  flexShrink: 0,
+  color: vars.muted,
+  opacity: 0,
+  touchAction: "none",
+  userSelect: "none",
+  WebkitUserSelect: "none",
+  cursor: "grab",
+  transition: interactiveTransition("opacity", "color"),
+  selectors: {
+    [`${railRow}:hover &`]: { opacity: 1 },
+    "&:hover": { color: vars.ink },
+    "&:active": { cursor: "grabbing" },
+  },
+  "@media": {
+    // No hover to reveal it on touch devices.
+    [media.touch]: {
+      opacity: 1,
+      width: 32,
+      height: 32,
+      margin: "-6px 0 -6px -8px",
+    },
+  },
+});
+
+// While a grip drag is live: the whole rail reads as grabbing, plain row
+// hover fill goes quiet so the lit divider / into-tint is the only signal,
+// and stray text selection stays off.
+export const railBodyDragActive = style({});
+
+globalStyle(`${railBodyDragActive} ${railRow}`, {
+  cursor: "grabbing",
+  userSelect: "none",
+});
+
+globalStyle(
+  `${railBodyDragActive} ${railRow}:hover:not([data-dragging="true"])`,
+  {
+    background: "transparent",
+  },
+);
+
+globalStyle(
+  `${railBodyDragActive} ${railRow}[data-drag-over="true"], ${railBodyDragActive} ${railRow}[data-drag-over="true"]:hover`,
+  {
+    background: `color-mix(in srgb, ${vars.accent.now} ${colorMixAlpha.hoverFill}%, transparent)`,
+  },
+);
+
+globalStyle(`${railBodyDragActive} ${railRowGrip}`, {
+  cursor: "grabbing",
+});
 
 export const treeChevron = style({
   display: "inline-flex",
@@ -245,11 +308,23 @@ export const treeChevron = style({
       color: vars.ink,
     },
   },
+  "@media": {
+    [media.mobile]: {
+      width: 26,
+      height: 26,
+      margin: "-6px 0",
+    },
+  },
 });
 
 export const treeChevronSpacer = style({
   display: "inline-block",
   width: 14,
+  "@media": {
+    [media.mobile]: {
+      width: 26,
+    },
+  },
 });
 
 export const railFooter = style({

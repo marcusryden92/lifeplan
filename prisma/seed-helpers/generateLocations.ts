@@ -65,7 +65,7 @@ export const generateLocations = (userId: string): Omit<Location, "createdAt" | 
 /**
  * Generates travel time data for seeding
  */
-export const generateTravelTimes = (userId: string): Omit<TravelTime, "id" | "createdAt" | "updatedAt">[] => {
+export const generateTravelTimes = (userId: string): Omit<TravelTime, "id" | "createdAt" | "updatedAt" | "unroutableAt">[] => {
   return [
     // Home -> Uppsala
     {

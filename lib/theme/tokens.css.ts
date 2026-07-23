@@ -11,6 +11,16 @@ export const vars = createThemeContract({
   overlay: null,
   tileFill: null,
 
+  // Shell chrome surfaces, sourced per theme from the grayscale ramp (scales.ts).
+  // modal is the centered-modal tier (popover recipe xl): it floats over the
+  // page overlay, so it sits one elevation rung above content.
+  surface: {
+    canvas: null,
+    sidebar: null,
+    content: null,
+    modal: null,
+  },
+
   glass: {
     bg: null,
     bgDeep: null,

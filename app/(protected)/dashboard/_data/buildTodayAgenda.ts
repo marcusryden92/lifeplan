@@ -178,7 +178,12 @@ export function buildTodayAgenda(args: {
   const anyNow = sorted.some((it) => it.now);
   if (!anyNow) {
     const upcoming = sorted.find((it) => it.start.getTime() > now.getTime());
-    if (upcoming) upcoming.next = true;
+    if (upcoming) {
+      upcoming.next = true;
+      upcoming.startsInMinutes = Math.ceil(
+        (upcoming.start.getTime() - now.getTime()) / 60000,
+      );
+    }
   }
 
   return sorted;

@@ -5,11 +5,9 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
-import { plannerIdFromEventId } from "@/utils/planRecurrence";
 import { colorMixAlpha } from "@/lib/theme";
 import { computeTemplateBorder } from "@/utils/colorUtils";
 import { getEventTier } from "@/utils/eventTier";
-import { useSetCalendarHoverLabel } from "../CalendarHoverLabelContext";
 import {
   TRESPASS_BORDER_COLOR,
   TRESPASS_BORDER_WIDTH,
@@ -61,8 +59,7 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
   setEventRect,
   children,
 }: EventWrapperProps) => {
-  const { userSettings, planner, categories } = useCalendarProvider();
-  const setHoverLabel = useSetCalendarHoverLabel();
+  const { userSettings } = useCalendarProvider();
   const isMobile = useIsMobile();
 
   useLayoutEffect(() => {
@@ -118,29 +115,8 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
           borderBottom: `${trespassPx} solid ${TRESPASS_BORDER_COLOR}`,
         }),
       }}
-      onMouseEnter={() => {
-        setOnHover(true);
-        if (!setHoverLabel) return;
-        // Walk planner-parent chain to find effective categoryId (subtasks
-        // inherit from their goal ancestor).
-        let cursor = planner.find(
-          (p) => p.id === plannerIdFromEventId(event.id),
-        );
-        let catId: string | null | undefined = cursor?.categoryId;
-        const seen = new Set<string>();
-        while (cursor && !catId && cursor.parentId && !seen.has(cursor.id)) {
-          seen.add(cursor.id);
-          cursor = planner.find((p) => p.id === cursor!.parentId);
-          catId = cursor?.categoryId;
-        }
-        if (!catId) return;
-        const cat = categories.find((c) => c.id === catId);
-        if (cat) setHoverLabel({ name: cat.name, color: cat.color ?? null });
-      }}
-      onMouseLeave={() => {
-        setOnHover(false);
-        setHoverLabel?.(null);
-      }}
+      onMouseEnter={() => setOnHover(true)}
+      onMouseLeave={() => setOnHover(false)}
       // No hover on touch — a single tap opens the popover (presented as a
       // bottom sheet on mobile). Desktop keeps double-click only. The popover
       // renders in this React tree but portals its DOM to body, so its clicks

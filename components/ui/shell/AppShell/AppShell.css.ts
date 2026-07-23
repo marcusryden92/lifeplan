@@ -18,7 +18,7 @@ export const bezelFrame = style({
 });
 
 export const canvas = style({
-  background: vars.paper,
+  background: vars.surface.canvas,
   color: vars.ink,
   fontFamily: vars.font.ui,
   borderRadius: radii["3xl"],
@@ -55,6 +55,8 @@ export const mainColumn = style({
   minWidth: 0,
   minHeight: 0,
   overflow: "hidden",
+  background: vars.surface.content,
+  transition: themeTransition,
   "@media": {
     // Pages collapse their rail grids to a single stacked column at the
     // tablet breakpoint and grow past the viewport, so the column must
@@ -66,6 +68,7 @@ export const mainColumn = style({
       // Top band clears the fixed corner actions (CornerActions, mobile-only);
       // bottom band clears the floating menu.
       paddingTop: 0,
+      paddingBottom: space["23"],
       WebkitOverflowScrolling: "touch",
     },
   },

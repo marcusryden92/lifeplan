@@ -32,6 +32,7 @@ function plan(overrides: Partial<Planner> = {}): Planner {
     earliestStartDate: null,
     allowedTimes: null,
     linkedItemId: null,
+    notes: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

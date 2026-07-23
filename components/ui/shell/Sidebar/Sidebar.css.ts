@@ -2,15 +2,12 @@
 import { vars } from "@/lib/theme/tokens.css";
 import { radii, space } from "@/lib/theme/scales";
 import { popover } from "@/lib/theme/recipes.css";
-import { backdropFilters } from "@/lib/theme/effects";
 import { collapseTransition, buttonTransition, DURATIONS } from "@/lib/theme/transitions";
 
 export const sidebar = style({
   flexShrink: 0,
   boxShadow: `1px 0 0 ${vars.rule}`,
-  background: vars.glass.bg,
-  backdropFilter: backdropFilters.panel,
-  WebkitBackdropFilter: backdropFilters.panel,
+  background: vars.surface.sidebar,
   // 15 centers the 30px icon column in the 60px collapsed rail; no token is 15.
   // eslint-disable-next-line theme/no-raw-scale-values
   padding: "15px",

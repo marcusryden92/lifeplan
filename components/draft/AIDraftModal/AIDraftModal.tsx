@@ -7,7 +7,6 @@ import { v4 as uuidv4 } from "uuid";
 import { format } from "date-fns";
 import {
   Button,
-  Backdrop,
   Grain,
   ConfirmModal,
   SegmentedControl,
@@ -817,7 +816,6 @@ export function AIDraftModal({
 
   const content = (
     <>
-      <Backdrop variant="blob" />
       <Grain />
 
       {!embedded && (
@@ -1071,7 +1069,6 @@ export function AIDraftModal({
   // assistant surface.
   const gateContent = (
     <>
-      <Backdrop variant="blob" />
       <Grain />
       {!embedded && (
         <div className={banner}>
@@ -1099,8 +1096,8 @@ export function AIDraftModal({
   return (
     <Dialog.Root
       open={open}
-      // Non-modal: the sidebar stays interactive while the assistant is open
-      // (theme toggle, nav). Dismissal is Esc / the Close button only.
+      // Non-modal so the Capture/Search palettes keep working above it; the
+      // full-screen cover blocks everything else. Dismissal is Esc / Close.
       modal={false}
       onOpenChange={(next) => {
         if (!next) requestClose();

@@ -28,10 +28,20 @@ export type LocationRow = {
   // Set once the row has been created as a real Location (fresh this session or
   // prefilled from an existing one). A created row is read-only here.
   createdId: string | null;
+  // One Places autocomplete session per row: rides every search from this row
+  // and is redeemed by the Place Details call when the row is created.
+  sessionToken?: string | null;
 };
 
 export function makeEmptyRow(name = ""): LocationRow {
-  return { key: uuidv4(), name, query: "", selected: null, createdId: null };
+  return {
+    key: uuidv4(),
+    name,
+    query: "",
+    selected: null,
+    createdId: null,
+    sessionToken: uuidv4(),
+  };
 }
 
 const isRowFilled = (row: LocationRow) =>
@@ -40,13 +50,19 @@ const isRowFilled = (row: LocationRow) =>
 type LocationRowsProps = {
   rows: LocationRow[];
   onChange: (rows: LocationRow[]) => void;
-  sessionToken: string | null;
 };
 
-export function LocationRows({ rows, onChange, sessionToken }: LocationRowsProps) {
+export function LocationRows({ rows, onChange }: LocationRowsProps) {
   // Keep exactly one trailing empty row: as soon as every visible row is
-  // filled, append a fresh blank one so the user can add more.
+  // filled, append a fresh blank one so the user can add more. Rows restored
+  // from stored progress may predate per-row session tokens — backfill them.
   useEffect(() => {
+    if (rows.some((r) => !r.sessionToken)) {
+      onChange(
+        rows.map((r) => (r.sessionToken ? r : { ...r, sessionToken: uuidv4() })),
+      );
+      return;
+    }
     if (rows.length > 0 && rows.every(isRowFilled)) {
       onChange([...rows, makeEmptyRow()]);
     }
@@ -61,7 +77,6 @@ export function LocationRows({ rows, onChange, sessionToken }: LocationRowsProps
         <LocationRowItem
           key={row.key}
           row={row}
-          sessionToken={sessionToken}
           onPatch={(patch) => patchRow(row.key, patch)}
         />
       ))}
@@ -71,18 +86,16 @@ export function LocationRows({ rows, onChange, sessionToken }: LocationRowsProps
 
 function LocationRowItem({
   row,
-  sessionToken,
   onPatch,
 }: {
   row: LocationRow;
-  sessionToken: string | null;
   onPatch: (patch: Partial<LocationRow>) => void;
 }) {
   const created = row.createdId !== null;
 
   const { predictions, searching } = usePlaceSearch({
     query: row.query,
-    sessionToken,
+    sessionToken: row.sessionToken ?? null,
     skip: row.selected !== null || created,
   });
 

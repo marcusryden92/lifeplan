@@ -14,47 +14,9 @@ export const page = style({
     [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
-      paddingTop: space["16"],
     },
   },
 });
-
-export const subHeader = style({
-  display: "flex",
-  alignItems: "baseline",
-  gap: space["3"],
-  padding: "20px 28px 18px",
-  flexShrink: 0,
-  "@media": {
-    [media.mobile]: {
-      padding: "16px 16px 12px",
-      flexWrap: "wrap",
-      gap: space["2.5"],
-    },
-  },
-});
-
-export const pageTitle = style([
-  display.pageTitle,
-  {
-    color: vars.ink,
-    lineHeight: 1,
-    margin: 0,
-    transition: themeTransition,
-    "@media": {
-      [media.mobile]: { fontSize: 24 },
-    },
-  },
-]);
-
-export const titleSummary = style([
-  text.bodySm,
-  {
-    color: vars.muted,
-    fontVariantNumeric: "tabular-nums",
-    transition: themeTransition,
-  },
-]);
 
 export const spacer = style({
   flex: 1,
@@ -64,6 +26,11 @@ export const actionCluster = style({
   display: "flex",
   gap: space["2"],
   flexShrink: 0,
+  "@media": {
+    [media.mobile]: {
+      display: "none",
+    },
+  },
 });
 
 export const mainGrid = style({
@@ -322,6 +289,17 @@ export const searchWrap = style({
   flex: 1,
   minWidth: 220,
   transition: themeTransition,
+  "@media": {
+    // Leaves room for the sort cluster on the same line.
+    [media.mobile]: { minWidth: 140 },
+  },
+});
+
+export const sortCluster = style({
+  display: "flex",
+  alignItems: "center",
+  gap: space["1.5"],
+  flexShrink: 0,
 });
 
 // Bare <Input> inside the search pill; the pill owns the box.
@@ -350,6 +328,56 @@ export const breadcrumbCurrent = style({
   fontWeight: 600,
 });
 
+// Mobile replacement for the rail + breadcrumb: one tappable pill naming the
+// current scope, opening the ScopeSheet.
+export const scopeRow = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: "10px 0",
+  borderBottom: `1px solid ${vars.rule}`,
+  flexShrink: 0,
+});
+
+export const scopePill = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: space["2"],
+  minWidth: 0,
+  maxWidth: "100%",
+  padding: "8px 14px",
+  borderRadius: radii.pill,
+  border: `1px solid ${vars.glass.stroke}`,
+  background: vars.glass.bgSoft,
+  color: vars.ink,
+  fontFamily: vars.font.ui,
+  fontSize: 13.5,
+  fontWeight: 600,
+  cursor: "pointer",
+  transition: themeTransition,
+});
+
+export const scopePillLabel = style({
+  minWidth: 0,
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+});
+
+export const scopePillCount = style({
+  fontSize: 11.5,
+  fontWeight: 500,
+  color: vars.muted,
+  fontVariantNumeric: "tabular-nums",
+  flexShrink: 0,
+});
+
+export const scopePillChevron = style({
+  display: "inline-flex",
+  color: vars.muted,
+  flexShrink: 0,
+});
+
 export const tableWrap = style({
   flex: 1,
   minHeight: 0,
@@ -363,12 +391,15 @@ export const tableWrap = style({
 // almost-always-horizontal-scrolling table.
 export const tableHead = style({
   display: "grid",
-  gridTemplateColumns: "28px 1fr 80px 100px 110px 130px 120px 90px 52px",
+  gridTemplateColumns:
+    "28px minmax(100px, 1fr) 80px 100px 110px 130px 120px 90px 52px",
   padding: "12px 8px 10px",
   borderBottom: `1px solid ${vars.rule}`,
   position: "sticky",
   top: 0,
-  background: vars.paper,
+  // surface.content, not paper: dark-mode paper is darker than the page
+  // surface, so a paper-filled sticky header reads as a dark band.
+  background: vars.surface.content,
   zIndex: 1,
   transition: themeTransition,
   "@media": {
@@ -438,7 +469,8 @@ export const tableRow = style([
   text.row,
   {
     display: "grid",
-    gridTemplateColumns: "28px 1fr 80px 100px 110px 130px 120px 90px 52px",
+    gridTemplateColumns:
+      "28px minmax(100px, 1fr) 80px 100px 110px 130px 120px 90px 52px",
     padding: "12px 8px",
     alignItems: "center",
     borderBottom: `1px solid ${vars.rule}`,

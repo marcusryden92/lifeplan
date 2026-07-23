@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui";
 import { formatMinutesToHours } from "@/utils/taskArrayUtils";
-import { MIN_CHUNK_MINUTES, type TaskSplittingSettings } from "@/utils/taskSplitting";
+import {
+  MIN_CHUNK_MINUTES,
+  SPLIT_MAX_UNLIMITED,
+  splitMaxIsUnlimited,
+  type TaskSplittingSettings,
+} from "@/utils/taskSplitting";
 import {
   boxesCol,
   inputsGrid,
@@ -14,7 +19,7 @@ import {
 
 // The default a fresh "Split into chunks" toggle enables with.
 export const DEFAULT_SPLITTING_SETTINGS: TaskSplittingSettings = {
-  minMinutes: 30,
+  minMinutes: 60,
   maxMinutes: 120,
   maxMinutesPerDay: null,
   minSpacingMinutes: null,
@@ -83,7 +88,9 @@ export function SplittingFields({
     onChange({
       ...settings,
       minMinutes: min,
-      maxMinutes: Math.max(min, settings.maxMinutes),
+      maxMinutes: splitMaxIsUnlimited(settings)
+        ? SPLIT_MAX_UNLIMITED
+        : Math.max(min, settings.maxMinutes),
       maxMinutesPerDay:
         settings.maxMinutesPerDay === null
           ? null
@@ -92,9 +99,19 @@ export function SplittingFields({
   };
 
   const commitMax = (raw: string) => {
+    if (raw.trim() === "") {
+      onChange({ ...settings, maxMinutes: SPLIT_MAX_UNLIMITED });
+      return;
+    }
     const parsed = Math.floor(Number(raw));
     if (!Number.isFinite(parsed)) return;
-    onChange({ ...settings, maxMinutes: Math.max(settings.minMinutes, parsed) });
+    onChange({
+      ...settings,
+      maxMinutes:
+        parsed <= 0
+          ? SPLIT_MAX_UNLIMITED
+          : Math.max(settings.minMinutes, parsed),
+    });
   };
 
   const commitPerDay = (raw: string) => {
@@ -131,8 +148,9 @@ export function SplittingFields({
         <div className={inputStack}>
           <span className={inputCaption}>Max (min)</span>
           <CommitNumberInput
-            value={settings.maxMinutes}
-            ariaLabel="Maximum chunk minutes"
+            value={splitMaxIsUnlimited(settings) ? null : settings.maxMinutes}
+            placeholder="∞"
+            ariaLabel="Maximum chunk minutes (0 or empty = no limit)"
             onCommit={commitMax}
           />
         </div>

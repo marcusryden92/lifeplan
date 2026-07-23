@@ -1,9 +1,12 @@
 ﻿import { style, keyframes } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
-import { space, media, radii, zIndex } from "@/lib/theme/scales";
+import { space, media, radii } from "@/lib/theme/scales";
 import { progressTrack as progressTrackRecipe } from "@/lib/theme/recipes.css";
-import { text } from "@/lib/theme/typography.css";
-import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
+import { text, fieldLabel } from "@/lib/theme/typography.css";
+import {
+  themeTransition,
+  interactiveTransition,
+} from "@/lib/theme/transitions";
 
 const lockedShake = keyframes({
   "0%, 100%": { transform: "translateX(0)" },
@@ -66,7 +69,7 @@ export const completeRow = style({
   height: "100%",
   width: "calc(50% - 24px)",
   "@media": {
-    [media.tablet]: { width: "100%" },
+    [media.laptop]: { width: "100%" },
     [media.mobile]: { flexWrap: "wrap", height: "auto" },
   },
 });
@@ -117,12 +120,8 @@ export const completeCheckbox = style({
 });
 
 export const completeLabel = style([
-  text.body,
+  fieldLabel,
   {
-    fontWeight: 600,
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    color: vars.muted,
     flexShrink: 0,
   },
 ]);
@@ -149,37 +148,35 @@ export const overviewRoot = style({
   display: "flex",
   flexDirection: "column",
   flex: 1,
+  minHeight: 0,
+  "@media": {
+    [media.mobile]: { flex: "1 0 auto" },
+  },
 });
 
+// The one scrolling region of the overview tab on desktop: title, tabs,
+// progress block, and delete dock stay fixed while both card columns scroll
+// together. On mobile the whole page scrolls instead (scrollArea), so the
+// grid reverts to natural flow. Two columns need the full desktop band —
+// below `laptop` the content column is too narrow for side-by-side field
+// grids (pickers truncate), so it collapses early.
 export const overviewGrid = style({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
   gap: space["12"],
-  flexShrink: 0,
+  flex: "1 1 0%",
+  minHeight: 0,
+  overflowY: "auto",
+  scrollbarGutter: "stable",
+  paddingBottom: space["4"],
   "@media": {
-    [media.tablet]: { gridTemplateColumns: "1fr", gap: space["6"] },
-  },
-});
-
-// Sticky within the page scroll area: sits at the content end when the page
-// is short, pins to the viewport bottom edge when it overflows — the delete
-// row and its top border never move, whatever the columns above are doing.
-// The negative bottom margin mirrors innerWrap's bottom padding
-// (ItemDetailLayout.css.ts) so the dock is flush with the scrollport edge in
-// both states instead of jumping 28px between them.
-export const deleteDock = style({
-  position: "sticky",
-  bottom: 0,
-  marginTop: "auto",
-  marginBottom: `-${space["7"]}px`,
-  flexShrink: 0,
-  zIndex: zIndex.docked,
-  borderTop: `1px solid ${vars.rule}`,
-  paddingTop: space["2.5"],
-  paddingBottom: space["2.5"],
-  transition: themeTransition,
-  "@media": {
-    [media.mobile]: { marginBottom: `-${space["6"]}px` },
+    [media.laptop]: { gridTemplateColumns: "1fr", gap: space["6"] },
+    [media.mobile]: {
+      flex: "0 0 auto",
+      minHeight: "auto",
+      overflowY: "visible",
+      scrollbarGutter: "auto",
+    },
   },
 });
 
@@ -193,6 +190,5 @@ export const leftCol = style({
 export const rightCol = style({
   display: "flex",
   flexDirection: "column",
-  gap: space["4"],
   minWidth: 0,
 });
