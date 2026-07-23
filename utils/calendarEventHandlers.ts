@@ -164,7 +164,10 @@ export const applyEventStartEdit = (
   updatePlannerArray(
     (prevPlanner) => {
       if (!prevPlanner.some((p) => p.id === eventId)) {
-        console.warn("[calendar] starts update matched no planner row", eventId);
+        console.warn(
+          "[calendar] starts update matched no planner row",
+          eventId,
+        );
         return prevPlanner;
       }
       return prevPlanner.map((ev) =>
@@ -698,15 +701,12 @@ export const handlePostponeTask = (
 
 export const handleClickDelete = (
   event: EventImpl,
-  elementRef: React.RefObject<HTMLDivElement>,
   calendar: SimpleEvent[],
   updateAll: (
     planner?: Planner[] | ((prev: Planner[]) => Planner[]),
     calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
   ) => void,
   plannerType: string,
-  parentId: string | null,
-  red = "#ef4444",
   setShowPopover?: React.Dispatch<React.SetStateAction<boolean>>,
 ) => {
   // No imperative styling here — FullCalendar recycles tile elements, and a

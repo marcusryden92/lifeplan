@@ -39,10 +39,10 @@ interface EventContentProps {
 }
 
 const EventContent: React.FC<EventContentProps> = ({ event }) => {
-  const { planner, updateAll, updatePlannerArray, calendar, userSettings } =
+  const { planner, updateAll, updatePlannerArray, calendar } =
     useCalendarProvider();
   const isMobile = useIsMobile();
-  const { plannerType, parentId, completedStartTime, completedEndTime } =
+  const { plannerType, completedStartTime, completedEndTime } =
     event.extendedProps;
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
@@ -78,8 +78,6 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
   const currentTime = new Date();
   const startTime = new Date(event.start);
   const endTime = new Date(event.end);
-
-  const red = userSettings.styles.events.errorColor;
 
   const displayPostponeButton =
     !isCompleted && floorMinutes(currentTime) > floorMinutes(startTime);
@@ -117,12 +115,9 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
     }
     handleClickDelete(
       event,
-      elementRef,
       calendar,
       updateAll,
       plannerType as string,
-      (parentId as string) ?? null,
-      red,
       setShowPopover,
     );
   };
@@ -164,7 +159,9 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
     if (isRecurringOccurrence && occurrencePlanId && occurrenceKey !== null) {
       // An already-customized occurrence skips the prompt — moving a moved
       // one-off always means "just this one".
-      if (hasMovedException(occurrencePlan.recurrenceExceptions, occurrenceKey)) {
+      if (
+        hasMovedException(occurrencePlan.recurrenceExceptions, occurrenceKey)
+      ) {
         applyOccurrenceMove(
           updatePlannerArray,
           occurrencePlanId,
@@ -205,7 +202,11 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
         elementWidth > 70 &&
         !event.extendedProps.isTemplateItem && (
           <div className={hoverActions}>
-            <button onClick={onDelete} className={iconButton} aria-label="Delete">
+            <button
+              onClick={onDelete}
+              className={iconButton}
+              aria-label="Delete"
+            >
               <Trash2 size={14} strokeWidth={2} />
             </button>
             <div className={actionGroup}>
@@ -283,7 +284,11 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
           mode="move"
           planTitle={occurrencePlan.title}
           onThisOccurrence={() => {
-            if (pendingMoveScope && occurrencePlanId && occurrenceKey !== null) {
+            if (
+              pendingMoveScope &&
+              occurrencePlanId &&
+              occurrenceKey !== null
+            ) {
               applyOccurrenceMove(
                 updatePlannerArray,
                 occurrencePlanId,
