@@ -66,7 +66,7 @@ export function LocationSection() {
   const dropdownDisabled = categoryHasLocation && !locationOverrideEnabled;
 
   return (
-    <FieldStack label="Location">
+    <FieldStack label="Location" full>
       <div className={placeRow}>
         {categoryHasLocation && (
           <div>
@@ -102,6 +102,7 @@ export function LocationSection() {
           options={locationOptions}
           onChange={(v) => changeLocation(v)}
           disabled={dropdownDisabled}
+          maxWidth={280}
           renderValue={(opt) => {
             if (currentLocation) {
               return (

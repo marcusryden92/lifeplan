@@ -1,39 +1,23 @@
 import { style } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
 import { space, radii } from "@/lib/theme/scales";
-import { display, text } from "@/lib/theme/typography.css";
+import { text } from "@/lib/theme/typography.css";
 import { themeTransition } from "@/lib/theme/transitions";
 
-export const cardHeader = style({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: space["3"],
-  paddingBottom: `${space["2"]}px`,
-  transition: themeTransition,
-  flexWrap: "wrap",
-  marginLeft: "auto",
-});
-
-export const cardTitle = style([
-  display.listTitle,
-  {
-    color: vars.ink,
-    transition: themeTransition,
-  },
-]);
-
+// Capped columns: pills sit at 28px circles where there's room and compress
+// evenly into narrower field columns instead of overflowing the grid cell.
 export const priorityRow = style({
-  display: "flex",
-  gap: space["2"],
-  flexWrap: "nowrap",
+  display: "grid",
+  gridTemplateColumns: "repeat(7, minmax(0, 28px))",
+  gap: space["1.5"],
+  justifyContent: "start",
 });
 
 export const priorityPill = style([
   text.bodySm,
   {
-    flex: "0 0 auto",
-    width: 28,
+    width: "100%",
+    minWidth: 0,
     height: 28,
     border: `1px solid ${vars.glass.stroke}`,
     background: "transparent",

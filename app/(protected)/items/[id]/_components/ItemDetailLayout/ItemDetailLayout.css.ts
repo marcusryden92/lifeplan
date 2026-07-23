@@ -1,6 +1,7 @@
 ﻿import { style } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
 import { space, contentWidth, media } from "@/lib/theme/scales";
+import { CORNER_ACTION_GUTTER } from "@/components/ui/shell/CornerActions/constants";
 import { iconBtn } from "@/lib/theme/recipes.css";
 import { display, text, caption } from "@/lib/theme/typography.css";
 import {
@@ -47,10 +48,17 @@ export const innerWrap = style({
   },
 });
 
+// Portrait mobile reserves the corner-search pill's footprint so the back
+// link doesn't sit under it; landscape phones fold the pills into the bottom
+// bar (PageHeader precedent), freeing the top again.
 export const backRow = style({
   display: "flex",
   alignItems: "center",
   paddingBottom: space["1.5"],
+  "@media": {
+    [media.mobile]: { paddingLeft: CORNER_ACTION_GUTTER },
+    [media.landscapePhone]: { paddingLeft: 0 },
+  },
 });
 
 export const backLink = style([

@@ -5,15 +5,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
-import { X } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { Check, ChevronRight, CornerDownRight, Plus, X } from "lucide-react";
 import {
-  Button,
+  BottomSheet,
   Caption,
-  Combobox,
   ConfirmModal,
+  Input,
   TypeBadge,
-  type ComboboxOption,
 } from "@/components/ui";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import {
   buildDemoteLossManifest,
@@ -37,12 +38,27 @@ import {
   cardSectionTitle,
   whyText,
   depGroupLabel,
+  depGroupHeader,
+  depGroupHeaderLabel,
+  depAddBtn,
   depRow,
   depTitleLink,
   depRemove,
-  depPickerRow,
   depError,
   depEmpty,
+  connectionsRow,
+  connectionsCount,
+  connOverlay,
+  connDialog,
+  connHeader,
+  connTitle,
+  connBody,
+  nestActionRow,
+  nestModalBody,
+  nestList,
+  nestOption,
+  nestOptionTitle,
+  nestEmpty,
 } from "./SideCards.css";
 
 export function NextOnCalendarCard() {
@@ -238,17 +254,16 @@ export function ConnectionsCard() {
   // triaged — subtasks included (node-level edges).
   const canHaveDependencies = isValidDependencyEndpoint(plannerById, item.id);
 
+  const [manageOpen, setManageOpen] = useState(false);
+  const isMobile = useIsMobile();
+
   if (!canHaveDependencies && !queue && hosts.length === 0) return null;
 
-  return (
-    <div className={card}>
-      <div className={nextCardHeaderRow}>
-        <span className={cardSectionTitle}>Connections</span>
-        <Link href="/graph" className={nextCardLink}>
-          Graph →
-        </Link>
-      </div>
+  const count =
+    (queue ? 1 : 0) + dependsOn.length + requiredBy.length + hosts.length;
 
+  const groups = (
+    <>
       {queue && (
         <>
           <span className={depGroupLabel}>In queue</span>
@@ -262,7 +277,17 @@ export function ConnectionsCard() {
 
       {canHaveDependencies && (
         <>
-          <span className={depGroupLabel}>Depends on</span>
+          <div className={depGroupHeader}>
+            <span className={depGroupHeaderLabel}>Depends on</span>
+            <button
+              type="button"
+              className={depAddBtn}
+              onClick={() => setPickerOpen(true)}
+            >
+              <Plus size={11} strokeWidth={2.4} />
+              Add
+            </button>
+          </div>
           {dependsOn.length === 0 ? (
             <div className={depEmpty}>No prerequisites.</div>
           ) : (
@@ -286,26 +311,7 @@ export function ConnectionsCard() {
               </div>
             ))
           )}
-          <div className={depPickerRow}>
-            <Button
-              variant="glass"
-              size="sm"
-              onClick={() => setPickerOpen(true)}
-            >
-              Add prerequisite…
-            </Button>
-          </div>
           {error && <div className={depError}>{error}</div>}
-          <DependencyPickerModal
-            open={pickerOpen}
-            onClose={() => setPickerOpen(false)}
-            anchor={item}
-            planner={planner}
-            queues={queues}
-            dependencies={dependencies}
-            linkedIds={linkedIds}
-            onPick={handleAdd}
-          />
 
           {requiredBy.length > 0 && (
             <>
@@ -342,6 +348,64 @@ export function ConnectionsCard() {
           ))}
         </>
       )}
+    </>
+  );
+
+  return (
+    <div className={card}>
+      <button
+        type="button"
+        className={connectionsRow}
+        onClick={() => setManageOpen(true)}
+        aria-haspopup="dialog"
+      >
+        <span className={cardSectionTitle}>Connections</span>
+        <span className={connectionsCount}>{count}</span>
+        <ChevronRight size={13} strokeWidth={2.2} />
+      </button>
+
+      {isMobile ? (
+        <BottomSheet
+          open={manageOpen}
+          onOpenChange={(next) => {
+            if (!next) setManageOpen(false);
+          }}
+          title="Connections"
+        >
+          {groups}
+        </BottomSheet>
+      ) : (
+        <Dialog.Root
+          open={manageOpen}
+          onOpenChange={(next) => {
+            if (!next) setManageOpen(false);
+          }}
+        >
+          <Dialog.Portal>
+            <Dialog.Overlay className={connOverlay} />
+            <Dialog.Content className={connDialog} aria-describedby={undefined}>
+              <div className={connHeader}>
+                <Dialog.Title className={connTitle}>Connections</Dialog.Title>
+                <Link href="/graph" className={nextCardLink}>
+                  Graph →
+                </Link>
+              </div>
+              <div className={connBody}>{groups}</div>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      )}
+
+      <DependencyPickerModal
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        anchor={item}
+        planner={planner}
+        queues={queues}
+        dependencies={dependencies}
+        linkedIds={linkedIds}
+        onPick={handleAdd}
+      />
     </div>
   );
 }
@@ -350,20 +414,23 @@ const joinTitles = (titles: string[]): string =>
   titles.map((t) => `"${t}"`).join(", ");
 
 // Demote entry point: nest this top-level item as a subtask of another goal.
-// The confirm enumerates everything the thunk's central pruning will drop —
-// the helper itself never prunes.
+// A rare structural action, so it rests as a single quiet row — picking the
+// target and confirming happen in one modal, whose body enumerates everything
+// the thunk's central pruning will drop (the helper itself never prunes).
 export function NestIntoGoalCard() {
   const { item } = useItem();
   const { planner, queues, dependencies, updatePlannerArray } =
     useCalendarProvider();
   const router = useRouter();
-  const [pendingTargetId, setPendingTargetId] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [targetId, setTargetId] = useState<string | null>(null);
+  const [goalQuery, setGoalQuery] = useState("");
   const [demoteError, setDemoteError] = useState<string | null>(null);
 
   const eligible =
     item.parentId == null && item.isTriaged && item.plannerType !== "plan";
 
-  const targetOptions = useMemo<ComboboxOption<string | null>[]>(
+  const targetGoals = useMemo(
     () =>
       planner
         .filter(
@@ -373,120 +440,160 @@ export function NestIntoGoalCard() {
             p.plannerType === "goal" &&
             p.id !== item.id,
         )
-        .sort((a, b) => (a.title || "").localeCompare(b.title || ""))
-        .map((p) => ({
-          value: p.id,
-          label: p.title || "Untitled",
-          searchLabel: p.title ?? undefined,
-        })),
+        .sort((a, b) => (a.title || "").localeCompare(b.title || "")),
     [planner, item.id],
   );
 
   const manifest = useMemo(
     () =>
-      pendingTargetId
+      targetId
         ? buildDemoteLossManifest(planner, queues, dependencies, item.id)
         : null,
-    [pendingTargetId, planner, queues, dependencies, item.id],
+    [targetId, planner, queues, dependencies, item.id],
   );
 
-  if (!eligible || targetOptions.length === 0) return null;
+  if (!eligible || targetGoals.length === 0) return null;
 
-  const pendingTarget = pendingTargetId
-    ? planner.find((p) => p.id === pendingTargetId)
-    : undefined;
   const dropsAnything =
     !!manifest &&
     (manifest.queueTitle !== null || manifest.inboundHostTitles.length > 0);
 
+  const query = goalQuery.trim().toLowerCase();
+  const visibleGoals = query
+    ? targetGoals.filter((g) =>
+        (g.title || "Untitled").toLowerCase().includes(query),
+      )
+    : targetGoals;
+
+  const closeModal = () => {
+    setPickerOpen(false);
+    setTargetId(null);
+    setGoalQuery("");
+  };
+
   const confirmDemote = () => {
-    if (!pendingTargetId) return;
+    if (!targetId) return;
     const result = demoteRootIntoGoal(
       planner,
       item.id,
-      pendingTargetId,
+      targetId,
       queues,
       dependencies,
     );
-    setPendingTargetId(null);
     if (!Array.isArray(result)) {
       setDemoteError(result.error);
       return;
     }
     setDemoteError(null);
     updatePlannerArray(result);
-    router.push(`/items/${pendingTargetId}/subtasks`);
+    router.push(`/items/${targetId}/subtasks`);
   };
 
   return (
     <div className={card}>
-      <span className={cardSectionTitle}>Nest under a goal</span>
-      <div className={whyText}>
-        Move this item and everything under it inside another goal. It stops
-        being its own top-level item.
-      </div>
-      <div className={depPickerRow}>
-        <Combobox
-          value={null}
-          options={targetOptions}
-          onChange={(id) => id && setPendingTargetId(id)}
-          placeholder="Nest under…"
-          ariaLabel="Nest under a goal"
-          maxWidth="100%"
-        />
-      </div>
+      <button
+        type="button"
+        className={nestActionRow}
+        onClick={() => setPickerOpen(true)}
+      >
+        <CornerDownRight size={13} strokeWidth={2.2} />
+        Nest under a goal…
+      </button>
       {demoteError && <div className={depError}>{demoteError}</div>}
 
       <ConfirmModal
-        open={pendingTargetId !== null}
-        title="Nest under goal"
+        open={pickerOpen}
+        title="Nest under a goal"
         body={
-          <>
+          <div className={nestModalBody}>
             <div>
-              <strong>{item.title}</strong> becomes a subtask of{" "}
-              <strong>{pendingTarget?.title || "Untitled"}</strong>, adopting
-              that goal&apos;s category and readiness.
+              <strong>{item.title}</strong> and everything under it move inside
+              the goal you pick, adopting its category and readiness. It stops
+              being its own top-level item.
             </div>
-            {manifest?.queueTitle && (
+            <Input
+              variant="boxed"
+              type="text"
+              placeholder="Search goals…"
+              value={goalQuery}
+              onChange={(e) => setGoalQuery(e.target.value)}
+              aria-label="Search goals"
+            />
+            <div
+              className={nestList}
+              role="listbox"
+              aria-label="Choose a goal"
+            >
+              {visibleGoals.length === 0 ? (
+                <div className={nestEmpty}>
+                  No goals match &quot;{goalQuery.trim()}&quot;
+                </div>
+              ) : (
+                visibleGoals.map((g) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    role="option"
+                    aria-selected={targetId === g.id}
+                    className={nestOption}
+                    onClick={() => setTargetId(g.id)}
+                  >
+                    <span className={nestOptionTitle}>
+                      {g.title || "Untitled"}
+                    </span>
+                    {targetId === g.id && (
+                      <Check size={13} strokeWidth={2.4} />
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+            {targetId && manifest && (
               <div>
-                It leaves the <strong>{manifest.queueTitle}</strong> queue.
+                {manifest.queueTitle && (
+                  <div>
+                    It leaves the <strong>{manifest.queueTitle}</strong> queue.
+                  </div>
+                )}
+                {manifest.dependsOnTitles.length > 0 && (
+                  <div>
+                    It keeps waiting for {joinTitles(manifest.dependsOnTitles)}
+                    .
+                  </div>
+                )}
+                {manifest.requiredByTitles.length > 0 && (
+                  <div>
+                    {joinTitles(manifest.requiredByTitles)} still wait
+                    {manifest.requiredByTitles.length === 1 ? "s" : ""} for it,
+                    now as part of the new goal.
+                  </div>
+                )}
+                {manifest.inboundHostTitles.length > 0 && (
+                  <div>
+                    Links into it from {joinTitles(manifest.inboundHostTitles)}{" "}
+                    are removed.
+                  </div>
+                )}
+                {manifest.outboundTargetTitles.length > 0 && (
+                  <div>
+                    Its links to {joinTitles(manifest.outboundTargetTitles)}{" "}
+                    stay, but now run in the new goal&apos;s order.
+                  </div>
+                )}
+                {dropsAnything && (
+                  <div>
+                    Dropped connections cannot be restored by promoting it back
+                    later.
+                  </div>
+                )}
               </div>
             )}
-            {manifest && manifest.dependsOnTitles.length > 0 && (
-              <div>
-                It keeps waiting for {joinTitles(manifest.dependsOnTitles)}.
-              </div>
-            )}
-            {manifest && manifest.requiredByTitles.length > 0 && (
-              <div>
-                {joinTitles(manifest.requiredByTitles)} still wait
-                {manifest.requiredByTitles.length === 1 ? "s" : ""} for it, now
-                as part of the new goal.
-              </div>
-            )}
-            {manifest && manifest.inboundHostTitles.length > 0 && (
-              <div>
-                Links into it from {joinTitles(manifest.inboundHostTitles)} are
-                removed.
-              </div>
-            )}
-            {manifest && manifest.outboundTargetTitles.length > 0 && (
-              <div>
-                Its links to {joinTitles(manifest.outboundTargetTitles)} stay,
-                but now run in the new goal&apos;s order.
-              </div>
-            )}
-            {dropsAnything && (
-              <div>
-                Dropped connections cannot be restored by promoting it back
-                later.
-              </div>
-            )}
-          </>
+          </div>
         }
         confirmLabel="Nest"
         cancelLabel="Cancel"
-        onCancel={() => setPendingTargetId(null)}
+        confirmDisabled={!targetId}
+        onCancel={closeModal}
         onConfirm={confirmDemote}
       />
     </div>

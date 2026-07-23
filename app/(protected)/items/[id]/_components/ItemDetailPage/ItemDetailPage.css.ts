@@ -2,7 +2,7 @@
 import { vars } from "@/lib/theme/tokens.css";
 import { space, media, radii } from "@/lib/theme/scales";
 import { progressTrack as progressTrackRecipe } from "@/lib/theme/recipes.css";
-import { text } from "@/lib/theme/typography.css";
+import { text, fieldLabel } from "@/lib/theme/typography.css";
 import {
   themeTransition,
   interactiveTransition,
@@ -69,7 +69,7 @@ export const completeRow = style({
   height: "100%",
   width: "calc(50% - 24px)",
   "@media": {
-    [media.tablet]: { width: "100%" },
+    [media.laptop]: { width: "100%" },
     [media.mobile]: { flexWrap: "wrap", height: "auto" },
   },
 });
@@ -120,12 +120,8 @@ export const completeCheckbox = style({
 });
 
 export const completeLabel = style([
-  text.body,
+  fieldLabel,
   {
-    fontWeight: 600,
-    letterSpacing: "0.08em",
-    textTransform: "uppercase",
-    color: vars.muted,
     flexShrink: 0,
   },
 ]);
@@ -161,7 +157,9 @@ export const overviewRoot = style({
 // The one scrolling region of the overview tab on desktop: title, tabs,
 // progress block, and delete dock stay fixed while both card columns scroll
 // together. On mobile the whole page scrolls instead (scrollArea), so the
-// grid reverts to natural flow.
+// grid reverts to natural flow. Two columns need the full desktop band —
+// below `laptop` the content column is too narrow for side-by-side field
+// grids (pickers truncate), so it collapses early.
 export const overviewGrid = style({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
@@ -172,7 +170,7 @@ export const overviewGrid = style({
   scrollbarGutter: "stable",
   paddingBottom: space["4"],
   "@media": {
-    [media.tablet]: { gridTemplateColumns: "1fr", gap: space["6"] },
+    [media.laptop]: { gridTemplateColumns: "1fr", gap: space["6"] },
     [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
