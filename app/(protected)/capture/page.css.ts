@@ -1,7 +1,7 @@
 ﻿import { style } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
-import { space, media, radii } from "@/lib/theme/scales";
-import { popover, glass } from "@/lib/theme/recipes.css";
+import { space, media, radii, zIndex } from "@/lib/theme/scales";
+import { glass } from "@/lib/theme/recipes.css";
 import { display, text, fieldLabel as fieldLabelPreset } from "@/lib/theme/typography.css";
 import { themeTransition } from "@/lib/theme/transitions";
 
@@ -329,21 +329,23 @@ export const categoryDropdownWrap = style({
   position: "relative",
 });
 
-export const categoryDropdown = style([
-  popover({ size: "sm" }),
-  {
-    position: "absolute",
-    top: "calc(100% + 6px)",
-    left: -8,
-    right: -8,
-    zIndex: 5,
-    display: "flex",
-    flexDirection: "column",
-    maxHeight: 220,
-    overflow: "auto",
-    padding: space["1"],
-  },
-]);
+export const categoryDropdown = style({
+  position: "absolute",
+  top: "calc(100% + 6px)",
+  left: -8,
+  right: -8,
+  zIndex: zIndex.floating,
+  display: "flex",
+  flexDirection: "column",
+  maxHeight: 220,
+  overflow: "auto",
+  padding: space["1"],
+  background: vars.paper,
+  border: `1px solid ${vars.glass.stroke}`,
+  borderRadius: radii["sm+2"],
+  boxShadow: vars.shadow.panel,
+  transition: themeTransition,
+});
 
 export const categoryDropdownItem = style([
   text.body,

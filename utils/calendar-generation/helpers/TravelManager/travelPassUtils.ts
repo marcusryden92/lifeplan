@@ -728,7 +728,6 @@ export function walkBackwardForFit(args: {
   referenceTime: Date;
 }): BackwardFitResult {
   let idx = args.walkStartIdx;
-  let consumed = 0;
   const consumedCategoryIds = new Set<string>();
   const regionEndMs = args.regionEnd.getTime();
 
@@ -740,7 +739,9 @@ export function walkBackwardForFit(args: {
         kind: "hardStop",
         idx,
         hardStopSlot: step.slot,
-        consumed,
+        consumed: Math.floor(
+          (regionEndMs - step.slot.end.getTime()) / 60000,
+        ),
         consumedCategoryIds: [...consumedCategoryIds],
       };
     }
@@ -750,6 +751,13 @@ export function walkBackwardForFit(args: {
     }
 
     const cand = step.value;
+    // Timestamp-based accounting (the fabric is gapless): measuring elapsed
+    // time from regionEnd avoids the sub-minute drift that accumulating
+    // floored durationMinutes produces — same reasoning as
+    // walkForwardForFit's referenceStartTime.
+    const consumedMs = regionEndMs - cand.slotEnd.getTime();
+    const slotDurMs = cand.slotEnd.getTime() - cand.slotStart.getTime();
+    const consumedMinutes = Math.floor(consumedMs / 60000);
 
     if (cand.origin && cand.origin !== args.destination) {
       const T = args.travelManager.getTravelTime(
@@ -758,7 +766,8 @@ export function walkBackwardForFit(args: {
         args.referenceTime,
       );
       if (T > 0) {
-        if (T <= consumed) {
+        const Tms = T * 60000;
+        if (Tms <= consumedMs) {
           // A non-sentinel atomic anchor (a real Travel span going from A to
           // some B != A) can't be a preFit-preserved anchor: preserving it
           // would leave the user at B at spanEnd, but the new travel starts
@@ -780,7 +789,7 @@ export function walkBackwardForFit(args: {
               origin: cand.origin,
               T,
               travelStart: cand.slotStart,
-              consumed: consumed + cand.slotDur,
+              consumed: Math.floor((consumedMs + slotDurMs) / 60000),
               consumedCategoryIds: [...localConsumed],
             };
           }
@@ -791,11 +800,11 @@ export function walkBackwardForFit(args: {
             origin: cand.origin,
             T,
             travelStart: cand.slotEnd,
-            consumed,
+            consumed: consumedMinutes,
             consumedCategoryIds: [...consumedCategoryIds],
           };
         }
-        if (T <= consumed + cand.slotDur) {
+        if (Tms <= consumedMs + slotDurMs) {
           // Candidate is absorbed (partial in naturalFit, whole in
           // overconstrained). Add its contributed cats to consumed.
           const localConsumed = new Set(consumedCategoryIds);
@@ -808,11 +817,11 @@ export function walkBackwardForFit(args: {
               origin: cand.origin,
               T,
               travelStart: cand.slotStart,
-              consumed,
+              consumed: consumedMinutes,
               consumedCategoryIds: [...localConsumed],
             };
           }
-          const travelStart = new Date(regionEndMs - T * 60000);
+          const travelStart = new Date(regionEndMs - Tms);
           return {
             kind: "naturalFit",
             idx: cand.idx,
@@ -820,7 +829,7 @@ export function walkBackwardForFit(args: {
             origin: cand.origin,
             T,
             travelStart,
-            consumed,
+            consumed: consumedMinutes,
             consumedCategoryIds: [...localConsumed],
           };
         }
@@ -828,14 +837,15 @@ export function walkBackwardForFit(args: {
     }
 
     // Overflow: consume candidate wholly, walk back.
-    consumed += cand.slotDur;
     for (const id of cand.contributedCategoryIds) consumedCategoryIds.add(id);
     idx = cand.prevIdx;
   }
 
+  const firstSlotStartMs =
+    args.slots.length > 0 ? args.slots[0].start.getTime() : regionEndMs;
   return {
     kind: "exhausted",
-    consumed,
+    consumed: Math.floor((regionEndMs - firstSlotStartMs) / 60000),
     consumedCategoryIds: [...consumedCategoryIds],
   };
 }

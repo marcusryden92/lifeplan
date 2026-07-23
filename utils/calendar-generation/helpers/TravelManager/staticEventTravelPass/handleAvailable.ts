@@ -15,11 +15,13 @@ import { logInconsistency } from "./staticEventTravelPass";
 
 // Classification of the two neighbors used by handleAvailable's dispatch.
 // "soft" = Available or Category (both can be bled into / across).
-// "hard" = Occupied (no bleeding).
-type NeighborKind = "soft" | "hard" | "travel" | "missing";
+// "hard" = Occupied (no bleeding). A missing neighbor (array edge) is hard
+// too — there is nothing to bleed into, but the transition itself is real
+// and must still be placed (or fail loud as insufficient), never dropped.
+type NeighborKind = "soft" | "hard" | "travel";
 
 function classifyNeighbor(slot: Slot | null): NeighborKind {
-  if (!slot) return "missing";
+  if (!slot) return "hard";
   if (slot.type === "available" || slot.type === "category") return "soft";
   if (slot.type === "occupied") return "hard";
   return "travel";

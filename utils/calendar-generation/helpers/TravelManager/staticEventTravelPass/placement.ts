@@ -87,7 +87,11 @@ export function placeTravelAtCategoryHead(
   const { prevLocation, nextLocation, travelMinutes } = action;
 
   const travelStart = slot.start;
-  const travelEnd = new Date(travelStart.getTime() + travelMinutes * 60000);
+  const naturalEnd = new Date(travelStart.getTime() + travelMinutes * 60000);
+  // A survivor under a minute would be a degenerate zero-duration category
+  // sliver; absorb it into the travel and treat the slot as fully consumed.
+  const fullyConsumed = slot.end.getTime() - naturalEnd.getTime() < 60000;
+  const travelEnd = fullyConsumed ? slot.end : naturalEnd;
 
   const shards = createTravelShards(
     [shardSourceFromCategory(slot, travelStart, travelEnd)],
@@ -99,7 +103,11 @@ export function placeTravelAtCategoryHead(
   );
 
   const replacements: Slot[] = [...shards];
-  if (travelEnd.getTime() < slot.end.getTime()) {
+  if (fullyConsumed) {
+    shards[0].consumedCategoryIds = (
+      shards[0].consumedCategoryIds ?? []
+    ).concat(slot.categoryId);
+  } else {
     replacements.push({
       ...slot,
       start: travelEnd,
@@ -112,7 +120,10 @@ export function placeTravelAtCategoryHead(
   }
 
   slots.splice(i, 1, ...replacements);
-  // Position walker at the (possibly-shortened) category for exit-edge handling.
+  // Position walker at the shortened category for exit-edge handling. When
+  // the travel consumed the whole slot this points at the following slot;
+  // handleCategory verifies it is the same category before running the exit
+  // edge, so a follower gets a full fresh walk (entry edge included).
   return i + 1;
 }
 
@@ -129,7 +140,10 @@ export function placeTravelAtCategoryTail(
   const { prevLocation, nextLocation, travelMinutes } = action;
 
   const travelEnd = slot.end;
-  const travelStart = new Date(travelEnd.getTime() - travelMinutes * 60000);
+  const naturalStart = new Date(travelEnd.getTime() - travelMinutes * 60000);
+  // Same sub-minute survivor rule as placeTravelAtCategoryHead.
+  const fullyConsumed = naturalStart.getTime() - slot.start.getTime() < 60000;
+  const travelStart = fullyConsumed ? slot.start : naturalStart;
 
   const shards = createTravelShards(
     [shardSourceFromCategory(slot, travelStart, travelEnd)],
@@ -141,7 +155,11 @@ export function placeTravelAtCategoryTail(
   );
 
   const replacements: Slot[] = [];
-  if (slot.start.getTime() < travelStart.getTime()) {
+  if (fullyConsumed) {
+    shards[0].consumedCategoryIds = (
+      shards[0].consumedCategoryIds ?? []
+    ).concat(slot.categoryId);
+  } else {
     replacements.push({
       ...slot,
       end: travelStart,
@@ -185,10 +203,14 @@ export function fillCurrentWithAlert(
 }
 
 // ---------------------------------------------------------------------------
-// Action: Category exit, Next=Occupied, doesn't fit, no backward Travel
+// Action: Category exit, doesn't fit, no cascade found a placement — mark
+// the exit boundary trespass. Every caller guarantees T > curDur, so a
+// visible travel can never fit inside the category; the boundary marker is
+// the only coherent output. The caller must have the leg tracked (this
+// untracks it — no travel is placed).
 // ---------------------------------------------------------------------------
 
-export function fillCategoryTailOrTrespass(
+export function trespassCategoryExit(
   slots: Slot[],
   i: number,
   action: TravelProcessingAction,
@@ -199,50 +221,11 @@ export function fillCategoryTailOrTrespass(
   const T = action.travelMinutes;
   const curDur = slot.durationMinutes;
 
-  if (T >= curDur) {
-    // Entire interior consumed -> trespass instead of visible travel.
-    slot.trespassingEnd = true;
-    travelManager.untrackLeg(action.prevLocation, action.nextLocation);
-    recorder?.decision(M.fillCategoryTailOrTrespass.trespassEnd(T, curDur), 3);
-    recorder?.action(
-      M.fillCategoryTailOrTrespass.trespassEndAction(recorder.label(slot)),
-    );
-    return i + 1;
-  }
-
-  // Otherwise fill the category TAIL with an alert travel.
-  const travelEnd = slot.end;
-  const travelStart = new Date(travelEnd.getTime() - curDur * 60000);
-  const shards = createTravelShards(
-    [shardSourceFromCategory(slot, travelStart, travelEnd)],
-    uuidv4(),
-    action.prevLocation,
-    action.nextLocation,
-    "preliminary",
-    {
-      insufficientTravel: true,
-      requiredTravelMinutes: T,
-      categoryId: slot.categoryId,
-      isStrictCategory: slot.isStrictCategory,
-    },
+  slot.trespassingEnd = true;
+  travelManager.untrackLeg(action.prevLocation, action.nextLocation);
+  recorder?.decision(M.trespassCategoryExit.trespassEnd(T, curDur), 3);
+  recorder?.action(
+    M.trespassCategoryExit.trespassEndAction(recorder.label(slot)),
   );
-
-  const replacements: Slot[] = [];
-  if (slot.start.getTime() < travelStart.getTime()) {
-    replacements.push({
-      ...slot,
-      end: travelStart,
-      durationMinutes: Math.floor(
-        (travelStart.getTime() - slot.start.getTime()) / 60000,
-      ),
-      nextLocationId: slot.currentLocationId,
-      trespassingEnd: undefined,
-      isFinal: undefined,
-    });
-  }
-  replacements.push(...shards);
-
-  slots.splice(i, 1, ...replacements);
-  recorder?.action(M.fillCategoryTailOrTrespass.fillTailAction(curDur, T));
-  return i + replacements.length;
+  return i + 1;
 }

@@ -108,7 +108,7 @@ export const M = {
       `Symmetric bleed (${half}min) ≥ a category, and ${occupiedLabel} sits past Cat2 at a different location — try backward cascade`,
     backwardCascadeFailed:
       "absorbAndReplanBackward() found no anchor — fall through to existing strategy",
-    noPrevTravel: "No prev Travel — fill category tail or trespass",
+    noPrevTravel: "No prev Travel — trespass the exit boundary",
     nextIsTravelDecision:
       "Next = Travel (unexpected on forward walk) — untrack and skip",
     skipInconsistent: "skip (inconsistent state)",
@@ -137,12 +137,10 @@ export const M = {
       `bleedIntoNext(): shortened ${label} by ${consume}min + filled current`,
   },
 
-  fillCategoryTailOrTrespass: {
+  trespassCategoryExit: {
     trespassEnd: (travelMinutes: number, curDur: number) =>
       `Travel (${travelMinutes}min) ≥ category (${curDur}min) — trespass at end instead of visible travel`,
     trespassEndAction: (label: string) => `mark trespassingEnd on ${label}`,
-    fillTailAction: (curDur: number, travelMinutes: number) =>
-      `fillCategoryTailOrTrespass(): fill ${curDur}min of category tail with alert travel (needs ${travelMinutes}min)`,
   },
 
   absorbAndReplan: {
@@ -164,9 +162,9 @@ export const M = {
 
   absorbAndReplanThroughCategory: {
     missingOrigin:
-      "Prev travel origin missing — fallback to fillCategoryTailOrTrespass()",
+      "Prev travel origin missing — fallback to trespassCategoryExit()",
     noTravelTime:
-      "A→C travel time unavailable — fallback to fillCategoryTailOrTrespass()",
+      "A→C travel time unavailable — fallback to trespassCategoryExit()",
     action: (absorbedLabels: string[], insufficient: boolean) =>
       `absorbAndReplanThroughCategory(): absorbed [${absorbedLabels.join(", ")}], placed new A→C travel through category${insufficient ? " (insufficient)" : ""}`,
   },
@@ -175,9 +173,9 @@ export const M = {
     header:
       "Cascade: absorbAndReplanIntoNextCategory() (current cat too small for symmetric bleed)",
     missingLocations:
-      "Missing prev Travel origin — fallback to fillCategoryTailOrTrespass()",
+      "Missing prev Travel origin — fallback to trespassCategoryExit()",
     noTravelTime:
-      "A→destination travel time unavailable — fallback to fillCategoryTailOrTrespass()",
+      "A→destination travel time unavailable — fallback to trespassCategoryExit()",
     noCandidate:
       "No natural-fit or pre-fit candidate found — fall back to symmetric bleed",
     naturalFit: (idx: number, dest: string, T: number) =>
@@ -216,9 +214,9 @@ export const M = {
   bypassCategoryCascade: {
     header: "Cascade: bypassCategoryCascade() (forward, category entry)",
     noPinnedDestination:
-      "No pinned destination found and no landing — fallback to fillCategoryTailOrTrespass()",
+      "No pinned destination found and no landing — fallback to trespassCategoryExit()",
     noTravelTime:
-      "A→destination travel time unavailable — fallback to fillCategoryTailOrTrespass()",
+      "A→destination travel time unavailable — fallback to trespassCategoryExit()",
     anchorHardStop: (idx: number, label: string) =>
       `anchor slots[${idx}] = ${label} → hard stop`,
     retargetOccupied: (newT: number) =>

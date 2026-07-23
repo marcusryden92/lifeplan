@@ -13,9 +13,9 @@ import { bleedAcrossCategoryBoundary } from "./bleed";
 import { bypassCategoryCascade } from "./cascade";
 import { findPrevTravelForAvailable } from "./lookups";
 import {
-  fillCategoryTailOrTrespass,
   placeTravelAtCategoryHead,
   placeTravelAtCategoryTail,
+  trespassCategoryExit,
 } from "./placement";
 import { logInconsistency } from "./staticEventTravelPass";
 
@@ -30,10 +30,25 @@ export function handleCategory(
   categories: Category[],
   recorder?: TravelPassRecorder,
 ): number {
+  const entrySlot = slots[i] as CategorySlot;
+  const entryCategoryId = entrySlot.categoryId;
+  const entryEndMs = entrySlot.end.getTime();
+
   recorder?.decision(M.handleCategory.entryEdge, 0);
   const afterEntry = handleCategoryEntryEdge(slots, i, travelManager, recorder);
 
-  if (afterEntry >= slots.length || slots[afterEntry].type !== "category") {
+  // Only run the exit edge when afterEntry still refers to THIS category
+  // visit (the original slot or its shortened remainder). An entry travel
+  // that consumed the whole slot — or a cascade that landed elsewhere —
+  // leaves afterEntry pointing at a different slot; running its exit edge
+  // here would skip that slot's own entry edge. Return to the walker so it
+  // gets a full fresh pass instead.
+  const afterSlot = afterEntry < slots.length ? slots[afterEntry] : null;
+  const sameVisit =
+    afterSlot?.type === "category" &&
+    afterSlot.categoryId === entryCategoryId &&
+    afterSlot.end.getTime() === entryEndMs;
+  if (!sameVisit) {
     return afterEntry;
   }
 
@@ -217,9 +232,12 @@ function handleCategoryExitEdge(
       return i + 1;
     }
 
-    const half = action.travelMinutes / 2;
+    // Whole-minute split: the current side takes the ceil so boundaries stay
+    // minute-aligned (matches bleedAcrossCategoryBoundary's rounding).
+    const half = Math.ceil(action.travelMinutes / 2);
+    const halfNext = action.travelMinutes - half;
     const symFails =
-      half >= slot.durationMinutes || half >= next.durationMinutes;
+      half >= slot.durationMinutes || halfNext >= next.durationMinutes;
 
     // Backward-cascade pre-check: when sym bleed would fail AND a located
     // Occupied sits flush against cat2 at a different location, the user's
@@ -358,13 +376,7 @@ function handleCategoryExitEdge(
     }
 
     recorder?.decision(M.handleCategoryExitEdge.noPrevTravel, 2);
-    return fillCategoryTailOrTrespass(
-      slots,
-      i,
-      action,
-      travelManager,
-      recorder,
-    );
+    return trespassCategoryExit(slots, i, action, travelManager, recorder);
   }
 
   // ---- Next type: Travel ----

@@ -81,7 +81,13 @@ export type GlassVariants = NonNullable<Parameters<typeof glass>[0]>;
 // bundle the radius + shadow pairing.
 export const popover = recipe({
   base: {
-    background: vars.glass.bgDeep,
+    // surface.modal, not glass.bgDeep: a floating popover must occlude what's
+    // behind it. In dark mode glass.bgDeep is a near-white brightening film at
+    // ~9% alpha that reads as a ghost over busy content (the calendar), and
+    // raising its alpha only marches it toward white. surface.modal is a dark,
+    // mostly-opaque frosted base in dark mode and identical to glass.bgDeep in
+    // light mode, so every tier stays legible without shifting light mode.
+    background: vars.surface.modal,
     backdropFilter: backdropFilters.panel,
     WebkitBackdropFilter: backdropFilters.panel,
     border: `1px solid ${vars.glass.stroke}`,
@@ -92,13 +98,7 @@ export const popover = recipe({
       sm: { borderRadius: radii["sm+2"] },
       md: { borderRadius: radii["md+2"] },
       lg: { borderRadius: radii["lg+2"] },
-      // xl is the centered-modal tier — it floats over the page overlay
-      // (which drowns the shared glass fill in dark mode), so it carries the
-      // elevated modal surface instead of glass.bgDeep.
-      xl: {
-        borderRadius: radii["xl+2"],
-        background: vars.surface.modal,
-      },
+      xl: { borderRadius: radii["xl+2"] },
     },
   },
   defaultVariants: {

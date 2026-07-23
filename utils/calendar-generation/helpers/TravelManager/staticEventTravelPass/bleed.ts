@@ -332,12 +332,19 @@ export function bleedAcrossCategoryBoundary(
   // to mark the boundary trespass and let the next handler operate on
   // the unshortened categories. Combined-too-small (T > curDur + nextDur)
   // falls into the same path.
-  const half = T / 2;
-  if (half >= curDur || half >= nextDur) {
+  // Whole-minute split (current side takes the ceil) so slot boundaries stay
+  // minute-aligned with the original fabric instead of landing on :30 seams
+  // for odd T.
+  const bleedCurrent = Math.ceil(T / 2);
+  const bleedNext = T - bleedCurrent;
+  if (bleedCurrent >= curDur || bleedNext >= nextDur) {
     travelManager.untrackLeg(action.prevLocation, action.nextLocation);
     current.trespassingEnd = true;
     next.trespassingStart = true;
-    recorder?.decision(M.bleedAcrossCategoryBoundary.trespassBoundary(half), 2);
+    recorder?.decision(
+      M.bleedAcrossCategoryBoundary.trespassBoundary(bleedCurrent),
+      2,
+    );
     if (recorder) {
       recorder.action(
         M.bleedAcrossCategoryBoundary.trespassAction(
@@ -349,19 +356,19 @@ export function bleedAcrossCategoryBoundary(
     return i + 1;
   }
 
-  // Symmetric bleed.
-  const bleedCurrent = half;
-  const bleedNext = half;
-
   const travelStart = new Date(current.end.getTime() - bleedCurrent * 60000);
   const travelEnd = new Date(next.start.getTime() + bleedNext * 60000);
 
-  // Two source pieces: current's tail and next's head.
+  // Two source pieces: current's tail and next's head. A zero-width piece
+  // (bleedNext can be 0 when T is 1) contributes no shard.
+  const sources: ShardSource[] = [
+    shardSourceFromCategory(current, travelStart, current.end),
+  ];
+  if (bleedNext > 0) {
+    sources.push(shardSourceFromCategory(next, next.start, travelEnd));
+  }
   const shards = createTravelShards(
-    [
-      shardSourceFromCategory(current, travelStart, current.end),
-      shardSourceFromCategory(next, next.start, travelEnd),
-    ],
+    sources,
     uuidv4(),
     action.prevLocation,
     action.nextLocation,

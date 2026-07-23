@@ -1,6 +1,6 @@
 "use client";
 
-import { radii } from "@/lib/theme";
+import { radii, space } from "@/lib/theme";
 import {
   useCallback,
   useEffect,
@@ -13,6 +13,7 @@ import { ChevronDown } from "lucide-react";
 import { CategoryDot } from "@/components/ui";
 import { useListKeyboardNav } from "@/hooks/useListKeyboardNav";
 import useClickOutside from "@/hooks/useClickOutside";
+import { buildIndentedCategoryList } from "@/utils/categoryUtils";
 import type { Category } from "@/types/prisma";
 import {
   categoryTrigger,
@@ -26,9 +27,19 @@ import {
   categoryDropdownItemMuted,
 } from "../../page.css";
 
-type CategoryOption = { id: string; name: string; color?: string | null };
+type CategoryOption = {
+  id: string;
+  name: string;
+  color?: string | null;
+  depth: number;
+};
 
-const NO_CATEGORY: CategoryOption = { id: "", name: "No category", color: null };
+const NO_CATEGORY: CategoryOption = {
+  id: "",
+  name: "No category",
+  color: null,
+  depth: 0,
+};
 
 export function CategoryPicker({
   categories,
@@ -46,7 +57,15 @@ export function CategoryPicker({
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const options: CategoryOption[] = useMemo(
-    () => [NO_CATEGORY, ...categories],
+    () => [
+      NO_CATEGORY,
+      ...buildIndentedCategoryList(categories).map((c) => ({
+        id: c.id,
+        name: c.name,
+        color: c.color,
+        depth: c.depth,
+      })),
+    ],
     [categories],
   );
 
@@ -141,6 +160,12 @@ export function CategoryPicker({
                 onMouseEnter={() => keyboardNav.setActiveIndex(i)}
                 onClick={() => handleSelect(opt)}
               >
+                {opt.depth > 0 && (
+                  <span
+                    aria-hidden
+                    style={{ width: opt.depth * space["3"], flexShrink: 0 }}
+                  />
+                )}
                 {isNone ? (
                   <span
                     aria-hidden

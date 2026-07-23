@@ -22,8 +22,8 @@ import { bleedAcrossCategoryBoundary } from "./bleed";
 import { applyBackwardCascadeFit } from "./cascade";
 import { PrevTravelMatch } from "./lookups";
 import {
-  fillCategoryTailOrTrespass,
   fillCurrentWithAlert,
+  trespassCategoryExit,
 } from "./placement";
 import {
   buildLandingSurvivor,
@@ -57,10 +57,17 @@ export function absorbAndReplan(
   if (oldFrom && oldTo) travelManager.untrackLeg(oldFrom, oldTo);
 
   // Plan A -> C, where A = prev Travel's origin, C = current.nextLocation.
+  // Fallbacks re-track what was untracked above: fillCurrentWithAlert places
+  // a travel for the original action (its leg must be back in the ledger),
+  // and the prev Travel survives in the array (its leg must too).
   const A = prevTravel.travel.travelFromLocationId;
   const C = originalAction.nextLocation;
   if (!A) {
     recorder?.decision(M.absorbAndReplan.missingOrigin, 4);
+    travelManager.trackLeg(
+      originalAction.prevLocation,
+      originalAction.nextLocation,
+    );
     const result = fillCurrentWithAlert(slots, i, originalAction);
     recorder?.action(M.absorbAndReplan.fillCurrentWithAlertAction);
     return result;
@@ -70,6 +77,14 @@ export function absorbAndReplan(
   const newDuration = travelManager.getTravelTime(A, C, slot.end);
   if (newDuration <= 0) {
     recorder?.decision(M.absorbAndReplan.noTravelTime, 4);
+    // Re-track in original temporal order (prev travel's leg first) — the
+    // reverse order trips the tracker's chain-return heuristic and wipes
+    // both legs.
+    if (oldFrom && oldTo) travelManager.trackLeg(oldFrom, oldTo);
+    travelManager.trackLeg(
+      originalAction.prevLocation,
+      originalAction.nextLocation,
+    );
     const result = fillCurrentWithAlert(slots, i, originalAction);
     recorder?.action(M.absorbAndReplan.fillCurrentWithAlertAction);
     return result;
@@ -88,9 +103,15 @@ export function absorbAndReplan(
   const regionEndMs = regionEnd.getTime();
   const regionMinutes = Math.floor((regionEndMs - regionStartMs) / 60000);
 
+  const firstIdx = prevTravel.availableIndex ?? prevTravel.travelIndex;
+
   // Decide the geometry:
   // - regionMinutes >= newDuration: travel fits naturally inside the absorbed
-  //   region. Place at the tail; leftover head becomes Available at A.
+  //   region. Place at the tail; the leftover head becomes Available at A —
+  //   but ONLY the contiguous head backed by free-at-A time (a real Available
+  //   or travel shards carved from one). Category-sourced shard time stays
+  //   inside the travel (overconstrained) so absorbed category time is never
+  //   re-emitted as free time.
   // - regionMinutes < newDuration AND next slot is a placeable at C with
   //   enough head room: extend the travel forward by the missing minutes.
   //   The next slot survives as a shortened tail at C.
@@ -98,12 +119,26 @@ export function absorbAndReplan(
   let actualTravelStart: Date;
   let actualTravelEnd: Date;
   let insufficient: boolean;
+  let overconstrained = false;
   let nextIsExtended = false;
+  let nextFullyConsumed = false;
 
   if (regionMinutes >= newDuration) {
-    actualTravelStart = new Date(regionEndMs - newDuration * 60000);
+    const naturalStartMs = regionEndMs - newDuration * 60000;
+    let freeHeadEndMs = regionStartMs;
+    for (let k = firstIdx; k <= i; k++) {
+      const s = slots[k];
+      const availableBacked =
+        s.type === "available" ||
+        (s.type === "travel" && s.originalType === "available");
+      if (!availableBacked) break;
+      freeHeadEndMs = Math.min(s.end.getTime(), naturalStartMs);
+      if (freeHeadEndMs < s.end.getTime()) break;
+    }
+    actualTravelStart = new Date(freeHeadEndMs);
     actualTravelEnd = regionEnd;
     insufficient = false;
+    overconstrained = freeHeadEndMs < naturalStartMs;
   } else {
     const extensionNeeded = newDuration - regionMinutes;
     const next = i + 1 < slots.length ? slots[i + 1] : null;
@@ -120,9 +155,13 @@ export function absorbAndReplan(
       next.durationMinutes >= extensionNeeded;
     if (canExtend && next) {
       actualTravelStart = regionStart;
-      actualTravelEnd = new Date(
+      const naturalEnd = new Date(
         regionEnd.getTime() + extensionNeeded * 60000,
       );
+      // A survivor under a minute would be a degenerate zero-duration slot;
+      // absorb the sliver into the travel instead.
+      nextFullyConsumed = next.end.getTime() - naturalEnd.getTime() < 60000;
+      actualTravelEnd = nextFullyConsumed ? next.end : naturalEnd;
       insufficient = false;
       nextIsExtended = true;
       recorder?.decision(
@@ -141,7 +180,6 @@ export function absorbAndReplan(
     }
   }
 
-  const firstIdx = prevTravel.availableIndex ?? prevTravel.travelIndex;
   const removeCount = (nextIsExtended ? i + 2 : i + 1) - firstIdx;
   const absorbed = slots.slice(firstIdx, firstIdx + removeCount);
   const shardSources = collectShardSources(
@@ -158,6 +196,7 @@ export function absorbAndReplan(
     {
       insufficientTravel: insufficient,
       requiredTravelMinutes: newDuration,
+      overconstrained: overconstrained || undefined,
     },
   );
 
@@ -177,7 +216,13 @@ export function absorbAndReplan(
   replacements.push(...shards);
   if (nextIsExtended) {
     const nextSlot = absorbed[absorbed.length - 1];
-    if (nextSlot.type === "category" || nextSlot.type === "available") {
+    if (nextFullyConsumed) {
+      if (nextSlot.type === "category" && shards.length > 0) {
+        shards[shards.length - 1].consumedCategoryIds = (
+          shards[shards.length - 1].consumedCategoryIds ?? []
+        ).concat(nextSlot.categoryId);
+      }
+    } else if (nextSlot.type === "category" || nextSlot.type === "available") {
       replacements.push(
         shortenPlaceableAtStart(nextSlot, actualTravelEnd, C),
       );
@@ -195,8 +240,9 @@ export function absorbAndReplan(
   }
   // When we extend into the next slot, land the walker ON the shortened next
   // so its own exit edge can fire (its prev now matches C, but its next is
-  // unchanged so a follow-up transition may still be needed).
-  return nextIsExtended
+  // unchanged so a follow-up transition may still be needed). No survivor
+  // exists when the extension consumed the next slot entirely.
+  return nextIsExtended && !nextFullyConsumed
     ? firstIdx + replacements.length - 1
     : firstIdx + replacements.length;
 }
@@ -243,7 +289,7 @@ export function absorbAndReplanThroughCategory(
       originalAction.prevLocation,
       originalAction.nextLocation,
     );
-    return fillCategoryTailOrTrespass(
+    return trespassCategoryExit(
       slots,
       i,
       originalAction,
@@ -307,7 +353,15 @@ export function absorbAndReplanIntoNextCategory(
 
   if (!A) {
     recorder?.decision(M.absorbAndReplanIntoNextCategory.missingLocations, 3);
-    return fillCategoryTailOrTrespass(
+    // Re-track the leg untracked at entry — trespassCategoryExit untracks it
+    // again, and an unbalanced double-untrack strips an unrelated same-pair
+    // leg from the ledger. (The prev-travel leg was never untracked here:
+    // that untrack is guarded on oldFrom, which is null when A is.)
+    travelManager.trackLeg(
+      originalAction.prevLocation,
+      originalAction.nextLocation,
+    );
+    return trespassCategoryExit(
       slots,
       i,
       originalAction,
@@ -404,12 +458,14 @@ export function absorbAndReplanIntoNextCategory(
     );
   } else {
     // No usable candidate (hardStop with no pinned dest, or exhausted).
-    // Re-track and fall back to symmetric bleed.
+    // Re-track and fall back to symmetric bleed — prev travel's leg first,
+    // matching the original tracking order (the reverse order trips the
+    // tracker's chain-return heuristic).
+    if (oldFrom && oldTo) travelManager.trackLeg(oldFrom, oldTo);
     travelManager.trackLeg(
       originalAction.prevLocation,
       originalAction.nextLocation,
     );
-    if (oldFrom && oldTo) travelManager.trackLeg(oldFrom, oldTo);
     recorder?.decision(M.absorbAndReplanIntoNextCategory.noCandidate, 3);
     return bleedAcrossCategoryBoundary(
       slots,

@@ -97,23 +97,26 @@ function shouldDropCatB(
   // T_AB: catA -> catB travel time. The walker would attempt to symmetric-
   // bleed this across catA.end / catB.start. We only act when that bleed
   // would fit — if it wouldn't fit, the regular trespass-boundary path
-  // already handles the case cleanly.
+  // already handles the case cleanly. Split mirrors
+  // bleedAcrossCategoryBoundary's whole-minute rounding (current side ceil).
   const T_AB = travelManager.getTravelTime(locA, locB, catB.start);
   if (T_AB <= 0) return false;
-  const half_AB = T_AB / 2;
-  if (half_AB >= catA.durationMinutes) return false;
-  if (half_AB >= catB.durationMinutes) return false;
+  const bleedA = Math.ceil(T_AB / 2);
+  const bleedBHead = T_AB - bleedA;
+  if (bleedA >= catA.durationMinutes) return false;
+  if (bleedBHead >= catB.durationMinutes) return false;
 
-  // T_BC: catB -> catC travel time. After the catA<->catB bleed eats half_AB
-  // from catB's head, catB's remaining duration must still leave room for
-  // the catB<->catC symmetric bleed.
+  // T_BC: catB -> catC travel time. After the catA<->catB bleed eats
+  // bleedBHead from catB's head, catB's remaining duration must still leave
+  // room for the catB<->catC symmetric bleed.
   const T_BC = travelManager.getTravelTime(locB, locC, catB.end);
   if (T_BC <= 0) return false;
-  const half_BC = T_BC / 2;
-  const postBleedCatB = catB.durationMinutes - half_AB;
+  const bleedBTail = Math.ceil(T_BC / 2);
+  const bleedCHead = T_BC - bleedBTail;
+  const postBleedCatB = catB.durationMinutes - bleedBHead;
 
   // Drop catB when its post-bleed remainder can't carry the catB<->catC bleed.
-  return half_BC >= postBleedCatB || half_BC >= catC.durationMinutes;
+  return bleedBTail >= postBleedCatB || bleedCHead >= catC.durationMinutes;
 }
 
 function replaceCatBWithZeroDistanceTravel(

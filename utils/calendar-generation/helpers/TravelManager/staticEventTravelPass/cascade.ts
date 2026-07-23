@@ -18,7 +18,7 @@ import {
   walkForwardForFit,
 } from "../travelPassUtils";
 import { nextPinnedLocation } from "./lookups";
-import { fillCategoryTailOrTrespass, fillCurrentWithAlert } from "./placement";
+import { fillCurrentWithAlert, trespassCategoryExit } from "./placement";
 import {
   buildLandingSurvivor,
   shortenPlaceableAtEnd,
@@ -41,7 +41,7 @@ export function bypassCategoryCascade(
   // Cat[i] doesn't fit the travel from prev (Occupied) into it. Walk forward
   // looking for a Category to land in (first-fit naturalFit / preFit). Hard
   // stop on Occupied/Travel; end-of-slots without a landing falls back to a
-  // pinned destination and ultimately fillCategoryTailOrTrespass().
+  // pinned destination and ultimately trespassCategoryExit().
   travelManager.untrackLeg(action.prevLocation, action.nextLocation);
   recorder?.decision(M.bypassCategoryCascade.header, 3);
 
@@ -153,29 +153,22 @@ export function bypassCategoryCascade(
   // No destination set — we never landed at a Category, hard-stopped on a
   // Travel slot, or hard-stopped on a location-less Occupied. Fall back to a
   // pinned destination so we still place something with a coherent target.
+  // The fallbacks re-track the leg untracked at the top before delegating —
+  // trespassCategoryExit untracks it again, and an unbalanced double-untrack
+  // would strip an unrelated same-pair leg from the ledger.
   if (destination === null) {
     const fallback = nextPinnedLocation(slots, i + 1);
     if (!fallback) {
       recorder?.decision(M.bypassCategoryCascade.noPinnedDestination, 4);
-      return fillCategoryTailOrTrespass(
-        slots,
-        i,
-        action,
-        travelManager,
-        recorder,
-      );
+      travelManager.trackLeg(action.prevLocation, action.nextLocation);
+      return trespassCategoryExit(slots, i, action, travelManager, recorder);
     }
     destination = fallback;
     T = travelManager.getTravelTime(A, destination, category.end);
     if (T <= 0) {
       recorder?.decision(M.bypassCategoryCascade.noTravelTime, 4);
-      return fillCategoryTailOrTrespass(
-        slots,
-        i,
-        action,
-        travelManager,
-        recorder,
-      );
+      travelManager.trackLeg(action.prevLocation, action.nextLocation);
+      return trespassCategoryExit(slots, i, action, travelManager, recorder);
     }
   }
 
