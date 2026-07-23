@@ -11,13 +11,14 @@ export const layout = style({
   minHeight: 0,
   gap: 0,
   "@media": {
-    [media.mobile]: { flexDirection: "column" },
+    [media.mobile]: { flexDirection: "column", flex: "1 0 auto" },
   },
 });
 
 export const treePane = style({
   flex: 1,
   minWidth: 0,
+  minHeight: 0,
   display: "flex",
   flexDirection: "column",
 });
@@ -45,12 +46,24 @@ export const drawerSheetFill = style({
   height: ["66vh", "66dvh"],
 });
 
+// The tree scrolls inside the height-locked tab frame on desktop, so the
+// drawer column stays in view; on mobile the whole page scrolls instead.
 export const card = style({
   display: "flex",
   flexDirection: "column",
   width: "100%",
   flex: 1,
   minHeight: 0,
+  overflowY: "auto",
+  scrollbarGutter: "stable",
+  "@media": {
+    [media.mobile]: {
+      flex: "1 0 auto",
+      minHeight: "auto",
+      overflowY: "visible",
+      scrollbarGutter: "auto",
+    },
+  },
 });
 
 export const legacyCardDisabled = style({

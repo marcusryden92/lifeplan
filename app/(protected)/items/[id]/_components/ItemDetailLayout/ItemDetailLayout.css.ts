@@ -18,8 +18,9 @@ export const page = style({
   overflow: "hidden",
 });
 
-// Owns the scroll so that overlays anchored to `.page` (AIDraftModal) don't
-// scroll away with the content underneath.
+// Mobile-only scroller (desktop content is height-locked and scrolls inside
+// each tab instead). Kept above `.page`-anchored overlays (AIDraftModal) so
+// they don't scroll away with the content underneath.
 export const scrollArea = style({
   display: "flex",
   flexDirection: "column",
@@ -28,6 +29,9 @@ export const scrollArea = style({
   overflow: "auto",
 });
 
+// Desktop: a height-locked frame — back row, title, tabs, and delete dock are
+// static; each tab page owns its own scroll region inside tabBodyWrap. Mobile
+// drops the lock so the whole page scrolls naturally in scrollArea.
 export const innerWrap = style({
   display: "flex",
   flexDirection: "column",
@@ -39,7 +43,7 @@ export const innerWrap = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [media.mobile]: { padding: "16px 16px 24px" },
+    [media.mobile]: { padding: "16px 16px 24px", overflow: "visible" },
   },
 });
 
@@ -188,16 +192,16 @@ export const tabBodyWrap = style({
   flexDirection: "column",
   flex: 1,
   minHeight: 0,
+  "@media": {
+    [media.mobile]: { flex: "1 0 auto" },
+  },
 });
 
-// Sticky within the page scroll area: sits at the content end when the page
-// is short, pins to the viewport bottom edge when it overflows — the delete
-// row and its top border never move, whatever the columns above are doing.
-// The negative bottom margin mirrors innerWrap's bottom padding
-// (ItemDetailLayout.css.ts) so the dock is flush with the scrollport edge in
-// both states instead of jumping 28px between them.
+// Pinned to the frame bottom on desktop (the height-locked innerWrap plus
+// marginTop auto); flows after the content on mobile's natural page scroll.
+// The negative bottom margin mirrors innerWrap's bottom padding so the dock
+// sits flush with the scrollport edge instead of floating 28px above it.
 export const deleteDock = style({
-  bottom: 0,
   marginTop: "auto",
   marginBottom: `-${space["7"]}px`,
   backgroundColor: vars.surface.content,

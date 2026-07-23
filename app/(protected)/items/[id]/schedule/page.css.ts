@@ -4,11 +4,25 @@ import { space, media } from "@/lib/theme/scales";
 import { display, text } from "@/lib/theme/typography.css";
 import { themeTransition } from "@/lib/theme/transitions";
 
+// Scrolls inside the height-locked tab frame on desktop; natural flow on
+// mobile where the whole page scrolls instead.
 export const root = style({
   paddingTop: space["3"],
   display: "flex",
   flexDirection: "column",
   gap: space["7"],
+  flex: "1 1 0%",
+  minHeight: 0,
+  overflowY: "auto",
+  scrollbarGutter: "stable",
+  "@media": {
+    [media.mobile]: {
+      flex: "1 0 auto",
+      minHeight: "auto",
+      overflowY: "visible",
+      scrollbarGutter: "auto",
+    },
+  },
 });
 
 export const sectionLabel = style([

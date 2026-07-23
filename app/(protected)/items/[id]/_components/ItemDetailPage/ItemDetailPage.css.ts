@@ -152,16 +152,33 @@ export const overviewRoot = style({
   display: "flex",
   flexDirection: "column",
   flex: 1,
+  minHeight: 0,
+  "@media": {
+    [media.mobile]: { flex: "1 0 auto" },
+  },
 });
 
+// The one scrolling region of the overview tab on desktop: title, tabs,
+// progress block, and delete dock stay fixed while both card columns scroll
+// together. On mobile the whole page scrolls instead (scrollArea), so the
+// grid reverts to natural flow.
 export const overviewGrid = style({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
   gap: space["12"],
-  flexShrink: 0,
-  overflowY: "hidden",
+  flex: "1 1 0%",
+  minHeight: 0,
+  overflowY: "auto",
+  scrollbarGutter: "stable",
+  paddingBottom: space["4"],
   "@media": {
     [media.tablet]: { gridTemplateColumns: "1fr", gap: space["6"] },
+    [media.mobile]: {
+      flex: "0 0 auto",
+      minHeight: "auto",
+      overflowY: "visible",
+      scrollbarGutter: "auto",
+    },
   },
 });
 

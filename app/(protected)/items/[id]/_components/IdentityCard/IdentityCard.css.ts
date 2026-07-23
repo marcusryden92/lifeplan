@@ -33,10 +33,13 @@ export const doubleGrid = style({
 // Splitting (task), Repeats (plan), and DailyLimit (goal root) are mutually
 // exclusive; AllowedTimes co-renders with them for tasks and goals. Each
 // renders as a one-line summary row whose editor opens in a popover, so the
-// slot height depends only on the row count, never on editor state.
+// slot height depends only on the row count, never on editor state. The
+// min-height reserves the two-row footprint so retyping to plan (one row)
+// doesn't shift anything below the card.
 export const rulesSlot = style({
   gridColumn: "1 / -1",
   minWidth: 0,
   display: "flex",
   flexDirection: "column",
+  minHeight: 76,
 });
