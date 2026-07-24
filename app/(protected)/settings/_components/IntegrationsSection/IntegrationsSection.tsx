@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { format } from "date-fns";
 import { CalendarPlus, RefreshCw, Trash2 } from "lucide-react";
@@ -16,9 +16,17 @@ import {
   updateExternalCalendarSource,
   deleteExternalCalendarSource,
 } from "@/actions/externalCalendars";
+import {
+  getGoogleCalendarStatus,
+  listGoogleCalendars,
+  addGoogleCalendarSource,
+  disconnectGoogleCalendar,
+} from "@/actions/googleCalendar";
+import type { GoogleCalendarListEntry } from "@/utils/external-calendar/googleCalendarApi";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useServerAction } from "@/hooks/useServerAction";
 import {
+  ExternalCalendarKind,
   ExternalCalendarMode,
   type ExternalCalendarSource,
 } from "@/types/prisma";
@@ -50,6 +58,15 @@ import {
   disabledNote,
   emptyNote,
   removeBtnDanger,
+  googleRow,
+  googleLabel,
+  googleTitle,
+  googleHint,
+  calendarPickerList,
+  calendarPickerRow,
+  calendarDot,
+  calendarPickerName,
+  calendarPickerRole,
 } from "./IntegrationsSection.css";
 
 type ModeKey = "BUSY" | "VISUAL";
@@ -69,7 +86,49 @@ export function IntegrationsSection() {
   const [name, setName] = useState("");
   const [confirmRemove, setConfirmRemove] =
     useState<ExternalCalendarSource | null>(null);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [busySourceId, setBusySourceId] = useState<string | null>(null);
+
+  // null = status still loading.
+  const [google, setGoogle] = useState<{
+    connected: boolean;
+    email?: string | null;
+  } | null>(null);
+  const [googleNotice, setGoogleNotice] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerCalendars, setPickerCalendars] = useState<
+    GoogleCalendarListEntry[] | null
+  >(null);
+  const [pickerError, setPickerError] = useState<string | null>(null);
+  const [addingCalendarId, setAddingCalendarId] = useState<string | null>(null);
+
+  useEffect(() => {
+    void getGoogleCalendarStatus().then(setGoogle);
+  }, []);
+
+  // The OAuth callback lands back here with ?google=connected|error.
+  useEffect(() => {
+    const flag = new URLSearchParams(window.location.search).get("google");
+    if (!flag) return;
+    setGoogleNotice(
+      flag === "connected"
+        ? "Google account connected."
+        : "Google connection failed — try again.",
+    );
+    window.history.replaceState(null, "", window.location.pathname);
+  }, []);
+
+  const googleSources = useMemo(
+    () =>
+      externalSources.filter((s) => s.kind === ExternalCalendarKind.GOOGLE),
+    [externalSources],
+  );
+  const googleSourceCount = googleSources.length;
+
+  const connectedGoogleCalendarIds = useMemo(
+    () => new Set(googleSources.map((s) => s.url)),
+    [googleSources],
+  );
 
   const eventCountBySource = useMemo(() => {
     const counts = new Map<string, number>();
@@ -148,6 +207,65 @@ export function IntegrationsSection() {
     [dispatch, updateAll],
   );
 
+  const openPicker = useCallback(async () => {
+    setPickerOpen(true);
+    setPickerError(null);
+    setPickerCalendars(null);
+    const result = await listGoogleCalendars();
+    if (result.success) {
+      setPickerCalendars(result.calendars);
+    } else {
+      setPickerCalendars([]);
+      setPickerError(result.error);
+    }
+  }, []);
+
+  const handleAddGoogle = useCallback(
+    async (calendar: GoogleCalendarListEntry) => {
+      setAddingCalendarId(calendar.id);
+      setPickerError(null);
+      try {
+        const result = await addGoogleCalendarSource({
+          calendarId: calendar.id,
+          name: calendar.summary,
+          color: calendar.backgroundColor,
+        });
+        if (result.success) {
+          dispatch(
+            applyExternalRefresh({
+              source: result.source,
+              events: result.events,
+            }),
+          );
+          updateAll();
+        } else {
+          setPickerError(result.error);
+        }
+      } finally {
+        setAddingCalendarId(null);
+      }
+    },
+    [dispatch, updateAll],
+  );
+
+  const handleDisconnect = useCallback(async () => {
+    setConfirmDisconnect(false);
+    const result = await disconnectGoogleCalendar();
+    if (!result.success) return;
+    setGoogle({ connected: false });
+    setPickerOpen(false);
+    setPickerCalendars(null);
+    for (const id of result.removedSourceIds) {
+      dispatch(removeExternalSource(id));
+    }
+    if (result.removedSourceIds.length > 0) updateAll();
+    setGoogleNotice(
+      result.revoked
+        ? "Google account disconnected."
+        : "Disconnected here, but Google couldn't confirm the access was revoked. To be safe, remove Circadium under your Google account's Security → Third-party access.",
+    );
+  }, [dispatch, updateAll]);
+
   const handleRemove = useCallback(async () => {
     if (!confirmRemove) return;
     const source = confirmRemove;
@@ -215,6 +333,99 @@ export function IntegrationsSection() {
           </div>
         </div>
 
+        <div className={googleRow}>
+          <div className={googleLabel}>
+            <span className={googleTitle}>
+              {google?.connected
+                ? `Google account · ${google.email ?? "connected"}`
+                : "Google account"}
+            </span>
+            <span className={googleHint}>
+              {googleNotice ??
+                (google?.connected
+                  ? "Import calendars this account can see — coworkers, rooms, secondary calendars."
+                  : "Connect to import calendars shared with you (coworkers, rooms) without hunting for feed URLs.")}
+            </span>
+          </div>
+          {google?.connected ? (
+            <>
+              <Button
+                variant="glass"
+                size="sm"
+                onClick={() =>
+                  pickerOpen ? setPickerOpen(false) : void openPicker()
+                }
+              >
+                <CalendarPlus size={12} strokeWidth={2.2} />
+                {pickerOpen ? "Hide calendars" : "Add from Google"}
+              </Button>
+              <Button
+                variant="glass"
+                size="sm"
+                className={removeBtnDanger}
+                onClick={() => setConfirmDisconnect(true)}
+              >
+                Disconnect
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="glass"
+              size="sm"
+              disabled={google === null}
+              onClick={() => {
+                window.location.href = "/api/integrations/google/connect";
+              }}
+            >
+              Connect Google
+            </Button>
+          )}
+        </div>
+
+        {pickerOpen && (
+          <div className={calendarPickerList}>
+            {pickerError && <span className={sourceError}>{pickerError}</span>}
+            {pickerCalendars === null ? (
+              <span className={emptyNote}>Loading calendars…</span>
+            ) : (
+              pickerCalendars.map((calendar) => {
+                const already = connectedGoogleCalendarIds.has(calendar.id);
+                const adding = addingCalendarId === calendar.id;
+                return (
+                  <div key={calendar.id} className={calendarPickerRow}>
+                    <span
+                      aria-hidden
+                      className={calendarDot}
+                      style={{
+                        background:
+                          calendar.backgroundColor ?? FALLBACK_DOT_COLOR,
+                      }}
+                    />
+                    <span className={calendarPickerName}>
+                      {calendar.summary}
+                    </span>
+                    <span className={calendarPickerRole}>
+                      {calendar.primary
+                        ? "primary"
+                        : calendar.accessRole === "freeBusyReader"
+                          ? "free/busy only"
+                          : calendar.accessRole}
+                    </span>
+                    <Button
+                      variant="glass"
+                      size="sm"
+                      disabled={already || adding}
+                      onClick={() => void handleAddGoogle(calendar)}
+                    >
+                      {already ? "Added" : adding ? "Adding…" : "Add"}
+                    </Button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
         {externalSources.length === 0 ? (
           <span className={emptyNote}>No calendars connected yet.</span>
         ) : (
@@ -229,7 +440,11 @@ export function IntegrationsSection() {
                 >
                   <div className={sourceHead}>
                     <span className={sourceName}>{source.name}</span>
-                    <span className={sourceUrl}>{source.url}</span>
+                    <span className={sourceUrl}>
+                      {source.kind === ExternalCalendarKind.GOOGLE
+                        ? `Google · ${source.url}`
+                        : source.url}
+                    </span>
                   </div>
                   <div className={sourceControls}>
                     <SegmentedControl
@@ -307,9 +522,10 @@ export function IntegrationsSection() {
       <div className={card}>
         <span className={cardTitle}>Provider sync</span>
         <span className={fieldNote}>
-          Direct Google Calendar and Outlook account sync (live updates,
-          two-way) is on the roadmap. ICS feeds refresh about once an hour when
-          you use the app, or manually with Refresh.
+          Google calendars added through your connected account refresh via the
+          Google Calendar API; ICS feeds re-fetch their URL. Both refresh about
+          once an hour when you use the app, or manually with Refresh. Direct
+          Outlook account sync and two-way sync are on the roadmap.
         </span>
       </div>
 
@@ -326,6 +542,24 @@ export function IntegrationsSection() {
         }
         onCancel={() => setConfirmRemove(null)}
         onConfirm={() => void handleRemove()}
+      />
+
+      <ConfirmModal
+        open={confirmDisconnect}
+        tone="danger"
+        title="Disconnect Google account?"
+        confirmLabel="Disconnect"
+        body={
+          <p style={{ margin: 0 }}>
+            Circadium&apos;s access to your Google Calendar is revoked and every
+            calendar imported through this account
+            {googleSourceCount > 0 ? ` (${googleSourceCount})` : ""}, along with
+            their events, is removed from your calendar. Your Google Calendar
+            itself is untouched, and you can reconnect at any time.
+          </p>
+        }
+        onCancel={() => setConfirmDisconnect(false)}
+        onConfirm={() => void handleDisconnect()}
       />
     </>
   );

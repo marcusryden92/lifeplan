@@ -21,6 +21,7 @@ import { AccountSection } from "./AccountSection";
 import { SchedulingSection } from "./SchedulingSection";
 import { AISection } from "./AISection";
 import { IntegrationsSection } from "./IntegrationsSection";
+import { DataSection } from "./DataSection";
 import { ComingSoonSection } from "./ComingSoonSection";
 import { DangerSection } from "./DangerSection";
 import {
@@ -91,16 +92,12 @@ const SECTION_META: Record<SectionId, { title: string; sub: string }> = {
 };
 
 const COMING_SOON_COPY: Record<
-  "notifications" | "data",
+  "notifications",
   { title: string; body: string }
 > = {
   notifications: {
     title: "Notifications",
     body: "Email digests and engine alerts are coming soon. They'll let you know when the engine couldn't place something important, or summarize what's slipping this week.",
-  },
-  data: {
-    title: "Data & export",
-    body: "Export your full plan, calendar history, and categories as JSON or CSV. Also planned: an import path from CSV templates.",
   },
 };
 
@@ -165,9 +162,7 @@ export function SettingsView({ user }: { user: SettingsUser }) {
               <ComingSoonSection {...COMING_SOON_COPY.notifications} />
             )}
             {section === "integrations" && <IntegrationsSection />}
-            {section === "data" && (
-              <ComingSoonSection {...COMING_SOON_COPY.data} />
-            )}
+            {section === "data" && <DataSection />}
             {section === "danger" && <DangerSection user={user} />}
           </div>
           <div className={pinstripeRule} aria-hidden />

@@ -36,6 +36,22 @@ model ExternalEvent {
   @@map("ExternalEvents")
 }
 
+// One per user: the offline grant for Google Calendar API access (BYO Google
+// account, independent of the login provider so credentials users can connect
+// too). The refresh token is exchanged for short-lived access tokens per
+// fetch; revoked + deleted on disconnect.
+model GoogleCalendarConnection {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  email        String? // Google account email, display only
+  refreshToken String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("GoogleCalendarConnections")
+}
+
 enum ExternalCalendarKind {
   ICS
   GOOGLE

@@ -380,7 +380,7 @@ export default function Home() {
           <Link href="#" className={footerLink}>
             Terms
           </Link>
-          <Link href="#" className={footerLink}>
+          <Link href="/privacy" className={footerLink}>
             Privacy
           </Link>
           <Link href="#" className={footerLink}>

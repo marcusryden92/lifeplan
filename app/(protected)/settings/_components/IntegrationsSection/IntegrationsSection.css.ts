@@ -115,3 +115,76 @@ export const removeBtnDanger = style({
     },
   },
 });
+
+export const googleRow = style({
+  display: "flex",
+  alignItems: "center",
+  gap: space["2"],
+  flexWrap: "wrap",
+  padding: `${space["2.5"]}px ${space["3"]}px`,
+  borderRadius: radii.md,
+  border: `${borderWidth.hairline}px solid ${vars.rule}`,
+  background: `color-mix(in srgb, ${vars.ink} 3%, transparent)`,
+});
+
+export const googleLabel = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: space["0.5"],
+  minWidth: 0,
+  flex: 1,
+});
+
+export const googleTitle = style({
+  fontWeight: 600,
+  fontSize: 13,
+  color: vars.ink,
+});
+
+export const googleHint = style({
+  fontSize: 11,
+  color: vars.muted,
+});
+
+export const calendarPickerList = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: space["1"],
+  paddingTop: space["1"],
+});
+
+export const calendarPickerRow = style({
+  display: "flex",
+  alignItems: "center",
+  gap: space["2"],
+  padding: `${space["1.5"]}px ${space["2"]}px`,
+  borderRadius: radii.sm,
+  selectors: {
+    "&:hover": {
+      background: vars.interactive.hoverFill,
+    },
+  },
+});
+
+export const calendarDot = style({
+  width: 10,
+  height: 10,
+  borderRadius: "50%",
+  flexShrink: 0,
+});
+
+export const calendarPickerName = style({
+  fontSize: 12.5,
+  color: vars.ink,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  minWidth: 0,
+  flex: 1,
+});
+
+export const calendarPickerRole = style({
+  fontSize: 10.5,
+  color: vars.muted,
+  flexShrink: 0,
+});

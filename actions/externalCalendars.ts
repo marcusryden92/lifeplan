@@ -16,34 +16,14 @@ import {
 } from "@/utils/external-calendar/icsUrl";
 import { toggleModeException } from "@/utils/external-calendar/modeExceptions";
 import {
-  EXTERNAL_EVENT_PAST_WINDOW_DAYS,
-  EXTERNAL_EVENT_FUTURE_WINDOW_DAYS,
-} from "@/utils/external-calendar/refreshPolicy";
-
-type SourceRow = Awaited<
-  ReturnType<typeof db.externalCalendarSource.findFirstOrThrow>
->;
-
-function serializeSource(row: SourceRow): ExternalCalendarSource {
-  return {
-    ...row,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-    lastFetchedAt: row.lastFetchedAt ? row.lastFetchedAt.toISOString() : null,
-  };
-}
-
-function expansionWindow(now: Date): { windowStart: Date; windowEnd: Date } {
-  const dayMs = 24 * 60 * 60 * 1000;
-  return {
-    windowStart: new Date(
-      now.getTime() - EXTERNAL_EVENT_PAST_WINDOW_DAYS * dayMs,
-    ),
-    windowEnd: new Date(
-      now.getTime() + EXTERNAL_EVENT_FUTURE_WINDOW_DAYS * dayMs,
-    ),
-  };
-}
+  serializeSource,
+  expansionWindow,
+  createGoogleCalendarSource,
+} from "@/utils/external-calendar/externalSourceServer";
+import {
+  getGoogleAccessToken,
+  fetchGoogleCalendarEvents,
+} from "@/utils/external-calendar/googleCalendarApi";
 
 async function fetchIcsText(url: string): Promise<string> {
   const controller = new AbortController();
@@ -135,8 +115,28 @@ export async function addExternalCalendarSource(input: {
     let icsText: string;
     const shareCalendarId = googleShareLinkCalendarId(url);
     if (shareCalendarId) {
-      // A Google sharing link is an HTML page; try the calendar's public
-      // feed, and when the calendar isn't public, name the exact fix.
+      // A Google sharing link is an HTML page, not a feed. With a connected
+      // Google account the calendar id resolves through the API (covers
+      // coworker/room calendars shared with that account); otherwise try the
+      // calendar's public feed, and failing that name the exact fix.
+      const connection = await db.googleCalendarConnection.findUnique({
+        where: { userId },
+      });
+      if (connection) {
+        try {
+          const created = await createGoogleCalendarSource({
+            userId,
+            refreshToken: connection.refreshToken,
+            calendarId: shareCalendarId,
+            name: input.name,
+            color: input.color,
+            mode: input.mode,
+          });
+          return { success: true, ...created };
+        } catch {
+          // The connected account can't read it — the public feed may still.
+        }
+      }
       const publicUrl = googlePublicIcsUrl(shareCalendarId);
       try {
         icsText = await fetchIcsText(publicUrl);
@@ -144,8 +144,9 @@ export async function addExternalCalendarSource(input: {
       } catch {
         return {
           success: false,
-          error:
-            "That's a Google Calendar sharing link, and this calendar isn't public. In Google Calendar on the web, open Settings, pick the calendar under “Settings for my calendars”, scroll to “Integrate calendar”, and copy the “Secret address in iCal format” — paste that .ics link here.",
+          error: connection
+            ? "That's a Google Calendar sharing link, but neither your connected Google account nor the public feed can read that calendar. Ask the owner to share it with your Google account, or paste the calendar's “Secret address in iCal format”."
+            : "That's a Google Calendar sharing link, and this calendar isn't public. Either connect your Google account under Connected calendars (works for calendars shared with you), or — for your own calendar — copy the “Secret address in iCal format” from Google Calendar's settings and paste that .ics link here.",
         };
       }
     } else {
@@ -211,16 +212,37 @@ export async function refreshExternalCalendarSource(sourceId: string): Promise<
     if (!existing) return { success: false, error: "Calendar not found" };
 
     try {
-      const icsText = await fetchIcsText(existing.url);
       const now = new Date();
       const { windowStart, windowEnd } = expansionWindow(now);
-      const { events } = parseIcsFeed({
-        icsText,
-        sourceId: existing.id,
-        userId,
-        windowStart,
-        windowEnd,
-      });
+      let events: ExternalEvent[];
+      if (existing.kind === ExternalCalendarKind.GOOGLE) {
+        const connection = await db.googleCalendarConnection.findUnique({
+          where: { userId },
+        });
+        if (!connection) {
+          throw new Error(
+            "Google account disconnected — reconnect it under Connected calendars",
+          );
+        }
+        const accessToken = await getGoogleAccessToken(connection.refreshToken);
+        events = await fetchGoogleCalendarEvents({
+          accessToken,
+          calendarId: existing.url,
+          sourceId: existing.id,
+          userId,
+          windowStart,
+          windowEnd,
+        });
+      } else {
+        const icsText = await fetchIcsText(existing.url);
+        ({ events } = parseIcsFeed({
+          icsText,
+          sourceId: existing.id,
+          userId,
+          windowStart,
+          windowEnd,
+        }));
+      }
 
       const [, , source] = await db.$transaction([
         db.externalEvent.deleteMany({ where: { sourceId: existing.id } }),

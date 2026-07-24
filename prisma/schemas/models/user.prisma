@@ -42,6 +42,7 @@ model User {
   viewState             UserViewState?
   externalCalendarSources ExternalCalendarSource[]
   externalEvents          ExternalEvent[]
+  googleCalendarConnection GoogleCalendarConnection?
 
   @@map("users")
 }
