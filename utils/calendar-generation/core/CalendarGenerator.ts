@@ -180,6 +180,16 @@ export class CalendarGenerator {
 
     this.metrics = updatedMetrics;
 
+    // Imported external busy blocks join the fixed-event fabric here — after
+    // template expansion, before slot building — so both the initial slot
+    // carve and every horizon expansion (which reads context.scheduledEvents)
+    // treat them as occupied time. assembleFinalEventList filters them back
+    // out so they never reach the persisted engine output.
+    const fabricEvents =
+      input.externalBusyEvents && input.externalBusyEvents.length > 0
+        ? [...filteredEvents, ...input.externalBusyEvents]
+        : filteredEvents;
+
     // Phase 4: Build location map + effective category map (planner -> categoryId
     // resolved by walking up the parent chain). Both are read-only derivations
     // off the planners + categories and have no dependency on the slot array
@@ -231,7 +241,7 @@ export class CalendarGenerator {
     const schedulingStartDate = setTimeOnDate(currentDate, "00:00");
     const builtSlots = buildAvailableSlots({
       startDate: schedulingStartDate,
-      existingEvents: filteredEvents,
+      existingEvents: fabricEvents,
       templateMasks: perTemplateMasks,
       categories: this.scheduledCategories,
       plannerLocationMap,
@@ -248,7 +258,7 @@ export class CalendarGenerator {
     const loggingConfig = input.config?.logging;
     const loggingLookups = buildLoggingLookups(
       this.scheduledCategories,
-      filteredEvents,
+      fabricEvents,
     );
     const travelPassRecorder = new TravelPassRecorder({
       enabled: enableLogging && !!loggingConfig?.staticEventTravelPass,
@@ -291,7 +301,7 @@ export class CalendarGenerator {
       currentDate,
       weekStartDay,
       input.planners,
-      filteredEvents,
+      fabricEvents,
       this.metrics,
       this.scheduledCategories,
       plannerLocationMap,

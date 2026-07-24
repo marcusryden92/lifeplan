@@ -26,6 +26,7 @@ import {
   pruneDependencies,
   prunePlannerDetours,
 } from "@/utils/precedence/prunePrecedenceInputs";
+import { deriveExternalBusyEvents } from "@/utils/external-calendar/deriveExternalBusyEvents";
 
 type CalendarPayload = {
   planner?: Planner[] | ((prev: Planner[]) => Planner[]);
@@ -118,6 +119,14 @@ export const updateAllCalendarStates =
     // Convert serialized array to Map for calendar generation
     const travelTimeMap = travelTimeArrayToMap(travelTimeMatrix);
 
+    // Imported external events that should block scheduling, resolved from
+    // each source's mode + per-event exceptions. Derived fresh per run so a
+    // refresh or exception toggle takes effect on the next regen.
+    const externalBusyEvents = deriveExternalBusyEvents(
+      state.externalCalendar.sources,
+      state.externalCalendar.events,
+    );
+
     // Source state lands immediately (optimistic UI); engine output follows
     // when the worker replies. These dispatches must stay BEFORE the await so
     // functional updates from rapid consecutive calls chain off fresh state.
@@ -162,6 +171,7 @@ export const updateAllCalendarStates =
             categories: newCategories,
             queues: newQueues,
             dependencies: newDependencies,
+            externalBusyEvents,
             previousEngineMessages,
           },
         },

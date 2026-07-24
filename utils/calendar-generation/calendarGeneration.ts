@@ -44,6 +44,8 @@ export interface GenerateCalendarOptions {
   queues?: Queue[];
   /** Prerequisite edges between root items */
   dependencies?: PlannerDependency[];
+  /** Imported external-calendar busy blocks (see CalendarGenerationInput) */
+  externalBusyEvents?: SimpleEvent[];
   /**
    * Prior engine messages array, consulted at emit time to carry forward
    * the user-owned `dismissed` flag by id. Callers pass the current Redux
@@ -137,6 +139,7 @@ export function generateCalendar(
     categories: opts.categories,
     queues: opts.queues,
     dependencies: opts.dependencies,
+    externalBusyEvents: opts.externalBusyEvents,
     config: {
       maxDaysAhead: SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
       enableLogging,

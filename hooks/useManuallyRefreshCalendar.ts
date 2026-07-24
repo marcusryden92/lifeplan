@@ -25,6 +25,7 @@ import {
   type SerializedTravelTimeEntry,
   type DebugStrategyConfig,
 } from "@/redux/slices/schedulingSettingsSlice";
+import { deriveExternalBusyEvents } from "@/utils/external-calendar/deriveExternalBusyEvents";
 
 const useManuallyRefreshCalendar = (
   userId: string | undefined,
@@ -68,6 +69,12 @@ const useManuallyRefreshCalendar = (
   const dependencies = useSelector(
     (state: RootState) => state.calendarSource.dependencies
   );
+  const externalSources = useSelector(
+    (state: RootState) => state.externalCalendar.sources
+  );
+  const externalEvents = useSelector(
+    (state: RootState) => state.externalCalendar.events
+  );
 
   // Store latest values in refs so callback doesn't need to depend on them
   const stateRef = useRef<{
@@ -78,6 +85,7 @@ const useManuallyRefreshCalendar = (
     categories: Category[];
     queues: Queue[];
     dependencies: PlannerDependency[];
+    externalBusyEvents: SimpleEvent[];
     weekStartDay: WeekDayIntegers;
     bufferTimeMinutes: number;
     enableTravelEvents: boolean;
@@ -93,6 +101,10 @@ const useManuallyRefreshCalendar = (
     categories,
     queues,
     dependencies,
+    externalBusyEvents: deriveExternalBusyEvents(
+      externalSources,
+      externalEvents,
+    ),
     weekStartDay,
     bufferTimeMinutes,
     enableTravelEvents,
@@ -109,6 +121,10 @@ const useManuallyRefreshCalendar = (
     categories,
     queues,
     dependencies,
+    externalBusyEvents: deriveExternalBusyEvents(
+      externalSources,
+      externalEvents,
+    ),
     weekStartDay,
     bufferTimeMinutes,
     enableTravelEvents,
@@ -127,6 +143,7 @@ const useManuallyRefreshCalendar = (
       categories,
       queues,
       dependencies,
+      externalBusyEvents,
       weekStartDay,
       bufferTimeMinutes,
       enableTravelEvents,
@@ -170,6 +187,7 @@ const useManuallyRefreshCalendar = (
           categories,
           queues,
           dependencies,
+          externalBusyEvents,
           previousEngineMessages,
         },
       }).then((result) => {

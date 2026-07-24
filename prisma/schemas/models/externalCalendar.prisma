@@ -1,0 +1,48 @@
+model ExternalCalendarSource {
+  id             String               @id @default(uuid())
+  userId         String
+  kind           ExternalCalendarKind
+  url            String
+  name           String
+  color          String?
+  enabled        Boolean              @default(true)
+  mode           ExternalCalendarMode @default(BUSY)
+  modeExceptions String? // JSON string[] of provider event UIDs whose busy/visual behavior flips the source default
+  lastFetchedAt  DateTime?
+  lastError      String? // Human-readable fetch/parse failure, cleared on the next successful refresh
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events         ExternalEvent[]
+
+  @@index([userId])
+  @@map("ExternalCalendarSources")
+}
+
+model ExternalEvent {
+  id       String                 @id // `${sourceId}|${uid}|${occurrenceStartISO}` — deterministic, CategoryEvent pattern
+  sourceId String
+  userId   String
+  uid      String // Provider event UID (series-level for recurring events) — the modeExceptions key
+  title    String
+  start    String
+  end      String
+  allDay   Boolean                @default(false)
+  source   ExternalCalendarSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  user     User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sourceId])
+  @@map("ExternalEvents")
+}
+
+enum ExternalCalendarKind {
+  ICS
+  GOOGLE
+  MICROSOFT
+}
+
+enum ExternalCalendarMode {
+  BUSY
+  VISUAL
+}

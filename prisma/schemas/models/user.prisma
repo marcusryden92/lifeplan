@@ -40,6 +40,8 @@ model User {
   queueMembers          QueueMember[]
   plannerDependencies   PlannerDependency[]
   viewState             UserViewState?
+  externalCalendarSources ExternalCalendarSource[]
+  externalEvents          ExternalEvent[]
 
   @@map("users")
 }

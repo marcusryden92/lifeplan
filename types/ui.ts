@@ -19,4 +19,11 @@ export type RuntimeEventExtendedProps = EventExtendedProps & {
   travelMinutes?: number | null;
   insufficientTravel?: boolean;
   requiredTravelMinutes?: number | null;
+  // External-calendar runtime fields (imported ICS events)
+  externalSourceId?: string;
+  externalUid?: string;
+  externalBusy?: boolean;
+  externalAllDay?: boolean;
+  externalSourceName?: string;
+  externalAccent?: string;
 };

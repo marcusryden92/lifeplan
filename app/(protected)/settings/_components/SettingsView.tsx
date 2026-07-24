@@ -20,6 +20,7 @@ import { ProfileSection } from "./ProfileSection";
 import { AccountSection } from "./AccountSection";
 import { SchedulingSection } from "./SchedulingSection";
 import { AISection } from "./AISection";
+import { IntegrationsSection } from "./IntegrationsSection";
 import { ComingSoonSection } from "./ComingSoonSection";
 import { DangerSection } from "./DangerSection";
 import {
@@ -83,23 +84,19 @@ const SECTION_META: Record<SectionId, { title: string; sub: string }> = {
   notifications: { title: "Notifications", sub: "alerts · email digests" },
   integrations: {
     title: "Integrations",
-    sub: "calendar sync · external apps",
+    sub: "connected calendars · ICS feeds",
   },
   data: { title: "Data & export", sub: "download · import · privacy" },
   danger: { title: "Danger zone", sub: "irreversible account actions" },
 };
 
 const COMING_SOON_COPY: Record<
-  "notifications" | "integrations" | "data",
+  "notifications" | "data",
   { title: string; body: string }
 > = {
   notifications: {
     title: "Notifications",
     body: "Email digests and engine alerts are coming soon. They'll let you know when the engine couldn't place something important, or summarize what's slipping this week.",
-  },
-  integrations: {
-    title: "Integrations",
-    body: "Two-way sync with Google Calendar, Outlook, and Apple Calendar is on the roadmap. For now, Circadium runs as its own canvas.",
   },
   data: {
     title: "Data & export",
@@ -167,9 +164,7 @@ export function SettingsView({ user }: { user: SettingsUser }) {
             {section === "notifications" && (
               <ComingSoonSection {...COMING_SOON_COPY.notifications} />
             )}
-            {section === "integrations" && (
-              <ComingSoonSection {...COMING_SOON_COPY.integrations} />
-            )}
+            {section === "integrations" && <IntegrationsSection />}
             {section === "data" && (
               <ComingSoonSection {...COMING_SOON_COPY.data} />
             )}

@@ -48,6 +48,20 @@ import {
   buildQueueCategoryByRootId,
   buildQueueByPlannerId,
 } from "@/utils/queue-handlers/queueLookups";
+import {
+  hydrateExternalCalendar,
+  applyExternalRefresh,
+  upsertExternalSource,
+} from "@/redux/slices/externalCalendarSlice";
+import {
+  fetchExternalCalendarData,
+  refreshExternalCalendarSource,
+} from "@/actions/externalCalendars";
+import { externalSourceNeedsRefresh } from "@/utils/external-calendar/refreshPolicy";
+import type {
+  ExternalCalendarSource,
+  ExternalEvent,
+} from "@/types/prisma";
 
 type CalendarContextType = {
   userId: string;
@@ -68,6 +82,8 @@ type CalendarContextType = {
   dependencies: PlannerDependency[];
   locations: SerializedLocation[];
   engineMessages: EngineMessage[];
+  externalSources: ExternalCalendarSource[];
+  externalEvents: ExternalEvent[];
   updatePlannerArray: (
     planner: Planner[] | ((prev: Planner[]) => Planner[]),
     options?: CalendarUpdateOptions,
@@ -329,6 +345,53 @@ export default function CalendarProvider({
     })();
   }, [isCalendarLoaded, userId, defaultTransportMode, dispatch, markSynced]);
 
+  const externalSources = useSelector(
+    (state: RootState) => state.externalCalendar.sources,
+  );
+  const externalEvents = useSelector(
+    (state: RootState) => state.externalCalendar.events,
+  );
+
+  // External-calendar bootstrap, once per app load: hydrate the slice from
+  // the DB, refresh TTL-stale feeds, then regen once so busy blocks from
+  // imported events shape this session's placements. Best-effort like the
+  // travel top-up — a dead feed keeps its lastError and stale rows.
+  const externalBootstrapFired = useRef(false);
+  useEffect(() => {
+    if (!isCalendarLoaded || !userId || externalBootstrapFired.current) return;
+    externalBootstrapFired.current = true;
+    void (async () => {
+      try {
+        const result = await fetchExternalCalendarData();
+        if (!result.success) return;
+        dispatch(
+          hydrateExternalCalendar({
+            sources: result.sources,
+            events: result.events,
+          }),
+        );
+        const now = new Date();
+        for (const source of result.sources) {
+          if (!externalSourceNeedsRefresh(source, now)) continue;
+          const refreshed = await refreshExternalCalendarSource(source.id);
+          if (refreshed.success) {
+            dispatch(
+              applyExternalRefresh({
+                source: refreshed.source,
+                events: refreshed.events,
+              }),
+            );
+          } else if (refreshed.source) {
+            dispatch(upsertExternalSource(refreshed.source));
+          }
+        }
+        if (result.sources.length > 0) updateAll();
+      } catch {
+        // The calendar works without external feeds until the next load.
+      }
+    })();
+  }, [isCalendarLoaded, userId, dispatch, updateAll]);
+
   const queueCategoryByRootId = useMemo(
     () => buildQueueCategoryByRootId(queues),
     [queues],
@@ -370,6 +433,8 @@ export default function CalendarProvider({
             dependencies,
             locations,
             engineMessages,
+            externalSources,
+            externalEvents,
             updatePlannerArray,
             updateTemplateArray,
             updateQueueArray,
@@ -396,6 +461,8 @@ export default function CalendarProvider({
       dependencies,
       locations,
       engineMessages,
+      externalSources,
+      externalEvents,
       updatePlannerArray,
       updateTemplateArray,
       updateQueueArray,

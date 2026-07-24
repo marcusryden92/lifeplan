@@ -1,6 +1,12 @@
 import { Prisma } from "@/generated/client";
 import type { WeekDayIntegers } from "./calendarTypes";
-export { PlannerType, EventType, UserRole } from "@/generated/client";
+export {
+  PlannerType,
+  EventType,
+  UserRole,
+  ExternalCalendarKind,
+  ExternalCalendarMode,
+} from "@/generated/client";
 
 // SimpleEvent with runtime fields added to extendedProps
 export type SimpleEvent = Omit<
@@ -83,3 +89,18 @@ export type Queue = Prisma.QueueGetPayload<{ include: { members: true } }>;
 export type QueueMember = Prisma.QueueMemberGetPayload<undefined>;
 
 export type PlannerDependency = Prisma.PlannerDependencyGetPayload<undefined>;
+
+// DateTime columns serialized to ISO strings at the action boundary
+// (Location precedent) so the rows are Redux-serializable.
+type RawExternalCalendarSource =
+  Prisma.ExternalCalendarSourceGetPayload<undefined>;
+export type ExternalCalendarSource = Omit<
+  RawExternalCalendarSource,
+  "createdAt" | "updatedAt" | "lastFetchedAt"
+> & {
+  createdAt: string;
+  updatedAt: string;
+  lastFetchedAt: string | null;
+};
+
+export type ExternalEvent = Prisma.ExternalEventGetPayload<undefined>;

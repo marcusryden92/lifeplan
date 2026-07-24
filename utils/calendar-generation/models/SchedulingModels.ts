@@ -350,6 +350,13 @@ export interface CalendarGenerationInput {
   queues?: Queue[];
   /** Prerequisite edges between root items */
   dependencies?: PlannerDependency[];
+  /**
+   * Imported external-calendar events resolved to busy blocks (SimpleEvent
+   * shape, eventType external). They join the fixed-event fabric so slots are
+   * carved around them, and are filtered back out of the persisted output at
+   * final assembly — never memoized, never synced.
+   */
+  externalBusyEvents?: SimpleEvent[];
 }
 
 export interface StrategyConfig {

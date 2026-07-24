@@ -54,6 +54,7 @@
     "luxon": "^3.7.2",
     "next": "14.2.35",
     "next-auth": "5.0.0-beta.20",
+    "node-ical": "^0.27.1",
     "partial-json": "^0.1.7",
     "react": "^18",
     "react-dom": "^18",

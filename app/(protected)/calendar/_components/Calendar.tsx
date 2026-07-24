@@ -13,6 +13,7 @@ import luxonPlugin from "@fullcalendar/luxon3";
 import EventContent from "@/components/events/EventContent";
 import TemplateEventContent from "@/components/events/TemplateEventContent";
 import TravelEventContent from "@/components/events/TravelEventContent";
+import ExternalEventContent from "@/components/events/ExternalEventContent";
 import { CategoryWrapperEvent } from "@/components/events/CategoryWrapperEvent";
 
 import type { EventDropArg, EventInput } from "@fullcalendar/core/index.js";
@@ -29,6 +30,7 @@ import {
   templatesToEventInput,
   categoryEventsToEventInput,
   travelEventsToEventInput,
+  externalEventsToEventInput,
 } from "@/utils/calendar-rendering";
 
 import {
@@ -111,6 +113,8 @@ function Calendar({ initialDate, dayHeaderContent }: CalendarProps) {
     categories,
     categoryEvents,
     travelEvents,
+    externalSources,
+    externalEvents,
     planner,
     updateTemplateArray,
     updatePlannerArray,
@@ -208,15 +212,15 @@ function Calendar({ initialDate, dayHeaderContent }: CalendarProps) {
     return () => clearTimeout(timeout);
   }, [isMobile]);
 
-  // Four render streams merged into the single FullCalendar event array:
+  // Five render streams merged into the single FullCalendar event array:
   //   1. persisted SimpleEvents (plans + scheduled tasks)
   //   2. templates expanded from EventTemplate config at render time (RRule)
   //   3. category occurrences from the persisted CategoryEvent table (with
   //      trespass info)
   //   4. travel blocks from the persisted TravelEvent table
-  // Only #1 lives in `calendar` — templates, category wrappers, and travel
-  // each live in their own source of truth and survive reloads without a
-  // Regenerate.
+  //   5. imported external-calendar events (read-only overlay/busy blocks)
+  // Only #1 lives in `calendar` — the other streams each live in their own
+  // source of truth and survive reloads without a Regenerate.
   const fullCalendarEvents: EventInput[] = useMemo(() => {
     const persisted = calendar ? transformEventsForFullCalendar(calendar) : [];
     const templates = templatesToEventInput(template ?? []);
@@ -225,8 +229,27 @@ function Calendar({ initialDate, dayHeaderContent }: CalendarProps) {
       categories ?? [],
     );
     const travel = travelEventsToEventInput(travelEvents ?? [], locations);
-    return [...persisted, ...templates, ...categoryWindows, ...travel];
-  }, [calendar, template, categories, categoryEvents, travelEvents, locations]);
+    const external = externalEventsToEventInput(
+      externalEvents ?? [],
+      externalSources ?? [],
+    );
+    return [
+      ...persisted,
+      ...templates,
+      ...categoryWindows,
+      ...travel,
+      ...external,
+    ];
+  }, [
+    calendar,
+    template,
+    categories,
+    categoryEvents,
+    travelEvents,
+    locations,
+    externalEvents,
+    externalSources,
+  ]);
 
   const onSelect = useCallback(
     (selectInfo: { start: Date; end: Date }) =>
@@ -500,6 +523,10 @@ function Calendar({ initialDate, dayHeaderContent }: CalendarProps) {
 
       if (eventType === EventType.travel) {
         return <TravelEventContent event={event} />;
+      }
+
+      if (eventType === EventType.external) {
+        return <ExternalEventContent event={event} />;
       }
 
       return <EventContent event={event} />;

@@ -114,4 +114,5 @@ enum EventType {
   template
   travel
   category
+  external
 }
