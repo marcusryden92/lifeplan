@@ -110,6 +110,7 @@ export async function importUserData(
           await tx.categoryEvent.deleteMany({ where: { userId } });
           await tx.travelEvent.deleteMany({ where: { userId } });
           await tx.engineMessage.deleteMany({ where: { userId } });
+          await tx.draftConversation.deleteMany({ where: { userId } });
           await tx.simpleEvent.deleteMany({ where: { userId } });
           await tx.queueMember.deleteMany({ where: { userId } });
           await tx.queue.deleteMany({ where: { userId } });
@@ -345,10 +346,10 @@ export async function importUserData(
     return { success: true, imported };
   } catch (error) {
     console.error("Failed to import user data:", error);
+    const detail = error instanceof Error ? error.message : "unknown error";
     return {
       success: false,
-      error:
-        "Import failed — nothing was changed. The file may be from an incompatible version.",
+      error: `Import failed — nothing was changed. Details: ${detail}`,
     };
   }
 }
