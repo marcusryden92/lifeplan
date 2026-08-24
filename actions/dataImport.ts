@@ -3,6 +3,10 @@
 import { randomUUID } from "crypto";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import {
+  parseLocationExceptions,
+  serializeLocationExceptions,
+} from "@/utils/external-calendar/locationExceptions";
 
 // Counterpart to exportUserData: load a Circadium export back into the account.
 // - "replace" wipes the account's data and restores the file (ids preserved,
@@ -282,11 +286,26 @@ export async function importUserData(
           userId,
         }));
 
-        const sourcesToInsert = sources.map((s) => ({
-          ...strip(s, ["events"]),
-          id: ref("source", s.id),
-          userId,
-        }));
+        const sourcesToInsert = sources.map((s) => {
+          // locationId is a FK and locationExceptions references location ids
+          // by value; both must be remapped in add mode or they dangle.
+          let locationExceptions = s.locationExceptions;
+          if (remap && typeof locationExceptions === "string") {
+            const parsed = parseLocationExceptions(locationExceptions);
+            const remapped: Record<string, string | null> = {};
+            for (const [uid, loc] of Object.entries(parsed)) {
+              remapped[uid] = loc ? ref("location", loc) : null;
+            }
+            locationExceptions = serializeLocationExceptions(remapped);
+          }
+          return {
+            ...strip(s, ["events"]),
+            id: ref("source", s.id),
+            locationId: s.locationId ? ref("location", s.locationId) : null,
+            locationExceptions,
+            userId,
+          };
+        });
 
         const eventsToInsert = events.flatMap((e) => {
           const sourceId = ref("source", e.sourceId);

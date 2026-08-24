@@ -36,6 +36,10 @@ export type SimpleEvent = Omit<
         travelMinutes?: number | null;
         insufficientTravel?: boolean;
         requiredTravelMinutes?: number | null;
+        // Resolved location for an imported external busy block (source default
+        // or per-event override). Only external busy events carry it; the slot
+        // builder reads it so travel is injected around located commitments.
+        locationId?: string | null;
       })
     | null;
 };

@@ -33,46 +33,46 @@ model EventExtendedProps {
 }
 
 model Planner {
-  id                 String      @id @default(uuid())
-  title              String
-  parentId           String?
-  plannerType        PlannerType
-  isReady            Boolean?
-  isTriaged          Boolean     @default(false) // Cleared on capture; set on first Capture save so the item leaves the triage queue
-  duration           Int
-  deadline           String?
-  starts             String?
-  recurrence           String? // JSON PlanRecurrenceRule ({freq, interval, until}); plans repeat anchored on starts, tasks/goals repeat as one flexibly-placed occurrence per period — non-null makes it recurring
-  recurrenceExceptions String? // JSON PlanOccurrenceException[]; per-occurrence moved/deleted overrides keyed by the occurrence's original local start
-  splitting            String? // JSON TaskSplittingSettings ({minMinutes, maxMinutes, maxMinutesPerDay?, minSpacingMinutes?}); one-off tasks split into dynamically sized chunks, recurring items reinterpret min/max as bounds for a single flexible occurrence block
-  completedSegments    String? // JSON CompletedSegment[] ({start, end}); one entry per completed chunk of a split task — completed minutes are always derived by summing, never stored
-  maxMinutesPerDay     Int? // Goals only — max minutes of this goal's subtree the engine may place on any single day
-  earliestStartDate    String? // Tasks + goals — the engine never places the item (or its subtree) before this instant; inherits down the tree as the max over ancestors
-  allowedTimes         String? // JSON AllowedTimesSettings ({days, ranges}); tasks + goals — restricts dynamic placement to the given weekdays / time-of-day ranges, intersected down the tree
-  linkedItemId         String? // Detour: on a subtask placeholder, points to a root goal/task whose leaves the engine splices in at this position (the placeholder's own duration/children are ignored while set). SetNull on target delete.
-  notes                String? // Free-form user notes; never read by the engine
-  sortOrder          Float       @default(0) // Fractional key ordering siblings within a parentId group; 0 on top-level roots (order non-semantic)
-  completedStartTime String?
-  completedEndTime   String?
-  priority           Int
-  userId             String
-  color              String?
-  locationId         String? // Optional FK to Location (null = "Anywhere")
-  useParentLocation  Boolean     @default(false) // When true, use category location instead of item's own locationId
-  categoryId         String? // Optional FK to Category for organization
-  createdAt          String
-  updatedAt          String
-  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  location           Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  category           Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  linkedItem         Planner?    @relation("PlannerLink", fields: [linkedItemId], references: [id], onDelete: SetNull)
-  linkedBy           Planner[]   @relation("PlannerLink")
-  taskPreferences    TaskPreferences?
-  queueMember        QueueMember?
-  dependenciesAsPredecessor PlannerDependency[] @relation("DependencyPredecessor")
-  dependenciesAsSuccessor   PlannerDependency[] @relation("DependencySuccessor")
-  occurrenceCompletions OccurrenceCompletion[]
-  habitItems         HabitItem[]
+  id                        String                 @id @default(uuid())
+  title                     String
+  parentId                  String?
+  plannerType               PlannerType
+  isReady                   Boolean?
+  isTriaged                 Boolean                @default(false) // Cleared on capture; set on first Capture save so the item leaves the triage queue
+  duration                  Int
+  deadline                  String?
+  starts                    String?
+  recurrence                String? // JSON PlanRecurrenceRule ({freq, interval, until}); plans repeat anchored on starts, tasks/goals repeat as one flexibly-placed occurrence per period — non-null makes it recurring
+  recurrenceExceptions      String? // JSON PlanOccurrenceException[]; per-occurrence moved/deleted overrides keyed by the occurrence's original local start
+  splitting                 String? // JSON TaskSplittingSettings ({minMinutes, maxMinutes, maxMinutesPerDay?, minSpacingMinutes?}); one-off tasks split into dynamically sized chunks, recurring items reinterpret min/max as bounds for a single flexible occurrence block
+  completedSegments         String? // JSON CompletedSegment[] ({start, end}); one entry per completed chunk of a split task — completed minutes are always derived by summing, never stored
+  maxMinutesPerDay          Int? // Goals only — max minutes of this goal's subtree the engine may place on any single day
+  earliestStartDate         String? // Tasks + goals — the engine never places the item (or its subtree) before this instant; inherits down the tree as the max over ancestors
+  allowedTimes              String? // JSON AllowedTimesSettings ({days, ranges}); tasks + goals — restricts dynamic placement to the given weekdays / time-of-day ranges, intersected down the tree
+  linkedItemId              String? // Detour: on a subtask placeholder, points to a root goal/task whose leaves the engine splices in at this position (the placeholder's own duration/children are ignored while set). SetNull on target delete.
+  notes                     String? // Free-form user notes; never read by the engine
+  sortOrder                 Float                  @default(0) // Fractional key ordering siblings within a parentId group; 0 on top-level roots (order non-semantic)
+  completedStartTime        String?
+  completedEndTime          String?
+  priority                  Int
+  userId                    String
+  color                     String?
+  locationId                String? // Optional FK to Location (null = "Anywhere")
+  useParentLocation         Boolean                @default(false) // When true, use category location instead of item's own locationId
+  categoryId                String? // Optional FK to Category for organization
+  createdAt                 String
+  updatedAt                 String
+  user                      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location                  Location?              @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  category                  Category?              @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  linkedItem                Planner?               @relation("PlannerLink", fields: [linkedItemId], references: [id], onDelete: SetNull)
+  linkedBy                  Planner[]              @relation("PlannerLink")
+  taskPreferences           TaskPreferences?
+  queueMember               QueueMember?
+  dependenciesAsPredecessor PlannerDependency[]    @relation("DependencyPredecessor")
+  dependenciesAsSuccessor   PlannerDependency[]    @relation("DependencySuccessor")
+  occurrenceCompletions     OccurrenceCompletion[]
+  habitItems                HabitItem[]
 
   @@index([userId])
   @@map("Planners")
@@ -115,8 +115,8 @@ model EventTemplate {
   recurrenceExceptions String? // JSON PlanOccurrenceException[]; per-occurrence moved/deleted overrides keyed by the occurrence's original local start
   createdAt            String
   updatedAt            String
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  location   Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  user                 User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location             Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@map("EventTemplates")

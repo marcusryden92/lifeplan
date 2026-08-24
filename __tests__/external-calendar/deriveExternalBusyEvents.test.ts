@@ -8,6 +8,14 @@ import {
   toggleModeException,
 } from "@/utils/external-calendar/modeExceptions";
 import {
+  parseLocationExceptions,
+  serializeLocationExceptions,
+  setLocationException,
+  clearLocationException,
+  resolveExternalEventLocation,
+  hasLocationException,
+} from "@/utils/external-calendar/locationExceptions";
+import {
   ExternalCalendarKind,
   ExternalCalendarMode,
   type ExternalCalendarSource,
@@ -27,6 +35,8 @@ function makeSource(
     enabled: true,
     mode: ExternalCalendarMode.BUSY,
     modeExceptions: null,
+    locationId: null,
+    locationExceptions: null,
     lastFetchedAt: null,
     lastError: null,
     createdAt: "2026-07-01T00:00:00.000Z",
@@ -97,6 +107,42 @@ describe("deriveExternalBusyEvents", () => {
     ).toHaveLength(0);
   });
 
+  it("stamps no location by default", () => {
+    const busy = deriveExternalBusyEvents([makeSource()], [makeEvent()]);
+    expect(busy[0].extendedProps?.locationId).toBeNull();
+  });
+
+  it("stamps the source's default location on every event", () => {
+    const source = makeSource({ locationId: "loc-hotel" });
+    const busy = deriveExternalBusyEvents([source], [makeEvent()]);
+    expect(busy[0].extendedProps?.locationId).toBe("loc-hotel");
+  });
+
+  it("a per-event override wins over the source default", () => {
+    const source = makeSource({
+      locationId: "loc-hotel",
+      locationExceptions: serializeLocationExceptions({ "uid-1": "loc-branch" }),
+    });
+    const busy = deriveExternalBusyEvents(
+      [source],
+      [makeEvent(), makeEvent({ id: "src-1|uid-2|x", uid: "uid-2" })],
+    );
+    const byUid = new Map(
+      busy.map((b) => [b.id, b.extendedProps?.locationId]),
+    );
+    expect(byUid.get("src-1|uid-1|2026-07-10T12:00:00.000Z")).toBe("loc-branch");
+    expect(byUid.get("src-1|uid-2|x")).toBe("loc-hotel");
+  });
+
+  it("a null per-event override pins the event to Anywhere despite a source default", () => {
+    const source = makeSource({
+      locationId: "loc-hotel",
+      locationExceptions: serializeLocationExceptions({ "uid-1": null }),
+    });
+    const busy = deriveExternalBusyEvents([source], [makeEvent()]);
+    expect(busy[0].extendedProps?.locationId).toBeNull();
+  });
+
   it("isExternalEventBusy agrees with the derivation", () => {
     const busySource = makeSource();
     const exceptedSource = makeSource({
@@ -123,5 +169,52 @@ describe("modeExceptions", () => {
 
     const mixed = toggleModeException(once, "uid-2");
     expect(parseModeExceptions(mixed)).toEqual(["uid-1", "uid-2"]);
+  });
+});
+
+describe("locationExceptions", () => {
+  it("parses defensively", () => {
+    expect(parseLocationExceptions(null)).toEqual({});
+    expect(parseLocationExceptions("not json")).toEqual({});
+    expect(parseLocationExceptions("[1,2]")).toEqual({});
+    expect(parseLocationExceptions('{"a":1,"b":"loc","c":null}')).toEqual({
+      b: "loc",
+      c: null,
+    });
+    expect(serializeLocationExceptions({})).toBeNull();
+  });
+
+  it("sets, clears, and resolves overrides, distinguishing null from absent", () => {
+    const source = { locationId: "loc-default", locationExceptions: null as string | null };
+
+    // Absent → inherits the source default.
+    expect(resolveExternalEventLocation(source, "uid-1")).toBe("loc-default");
+    expect(hasLocationException(source.locationExceptions, "uid-1")).toBe(false);
+
+    // Pinned to a specific location.
+    source.locationExceptions = setLocationException(
+      source.locationExceptions,
+      "uid-1",
+      "loc-branch",
+    );
+    expect(resolveExternalEventLocation(source, "uid-1")).toBe("loc-branch");
+    expect(hasLocationException(source.locationExceptions, "uid-1")).toBe(true);
+
+    // Explicit Anywhere override — present key, null value, beats the default.
+    source.locationExceptions = setLocationException(
+      source.locationExceptions,
+      "uid-2",
+      null,
+    );
+    expect(resolveExternalEventLocation(source, "uid-2")).toBeNull();
+    expect(hasLocationException(source.locationExceptions, "uid-2")).toBe(true);
+
+    // Clearing falls back to the source default again.
+    source.locationExceptions = clearLocationException(
+      source.locationExceptions,
+      "uid-1",
+    );
+    expect(resolveExternalEventLocation(source, "uid-1")).toBe("loc-default");
+    expect(hasLocationException(source.locationExceptions, "uid-1")).toBe(false);
   });
 });

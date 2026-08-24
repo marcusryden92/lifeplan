@@ -45,6 +45,7 @@ import {
   Switch,
 } from "@/components/ui";
 import { PopoverColorPicker } from "@/components/events/PopoverColorPicker";
+import { PopoverLocationPicker } from "@/components/events/PopoverLocationPicker";
 import { StatusLine } from "../StatusLine";
 import { card, cardTitle, fieldNote, footerRow } from "../../page.css";
 import {
@@ -396,7 +397,9 @@ export function IntegrationsSection() {
           Subscribe to a calendar feed by URL (ICS). Google Calendar, Outlook,
           and Apple Calendar all provide a private &ldquo;secret address&rdquo;
           you can paste here. Imported events show on your calendar and, by
-          default, block the scheduler from placing work over them.
+          default, block the scheduler from placing work over them. Give a
+          calendar a location and the scheduler adds travel time around its
+          events (override individual events from their popover).
         </span>
 
         <div className={addForm}>
@@ -658,6 +661,12 @@ export function IntegrationsSection() {
                       currentColor={source.color ?? FALLBACK_DOT_COLOR}
                       onChange={(color) =>
                         void handlePatch(source, { color }, false)
+                      }
+                    />
+                    <PopoverLocationPicker
+                      value={source.locationId ?? null}
+                      onChange={(locationId) =>
+                        void handlePatch(source, { locationId }, true)
                       }
                     />
                     <span className={controlSpacer} />

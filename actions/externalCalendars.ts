@@ -16,6 +16,10 @@ import {
 } from "@/utils/external-calendar/icsUrl";
 import { toggleModeException } from "@/utils/external-calendar/modeExceptions";
 import {
+  setLocationException,
+  clearLocationException,
+} from "@/utils/external-calendar/locationExceptions";
+import {
   serializeSource,
   expansionWindow,
   createGoogleCalendarSource,
@@ -290,6 +294,7 @@ export async function updateExternalCalendarSource(
     color?: string | null;
     mode?: ExternalCalendarMode;
     enabled?: boolean;
+    locationId?: string | null;
   },
 ): Promise<
   | { success: true; source: ExternalCalendarSource }
@@ -348,6 +353,38 @@ export async function toggleExternalEventBusyException(
     return { success: true, source: serializeSource(source) };
   } catch (error) {
     console.error("Failed to toggle external event exception:", error);
+    return { success: false, error: "Failed to update the event" };
+  }
+}
+
+// Per-event location override, keyed by series UID (survives refresh). Pass
+// { inherit: true } to drop the override and fall back to the source default,
+// or { locationId } to pin the event (null = Anywhere).
+export async function setExternalEventLocation(
+  sourceId: string,
+  uid: string,
+  next: { inherit: true } | { locationId: string | null },
+): Promise<
+  | { success: true; source: ExternalCalendarSource }
+  | { success: false; error: string }
+> {
+  try {
+    const userId = await requireUserId();
+    const existing = await db.externalCalendarSource.findFirst({
+      where: { id: sourceId, userId },
+    });
+    if (!existing) return { success: false, error: "Calendar not found" };
+    const locationExceptions =
+      "inherit" in next
+        ? clearLocationException(existing.locationExceptions, uid)
+        : setLocationException(existing.locationExceptions, uid, next.locationId);
+    const source = await db.externalCalendarSource.update({
+      where: { id: existing.id },
+      data: { locationExceptions },
+    });
+    return { success: true, source: serializeSource(source) };
+  } catch (error) {
+    console.error("Failed to set external event location:", error);
     return { success: false, error: "Failed to update the event" };
   }
 }

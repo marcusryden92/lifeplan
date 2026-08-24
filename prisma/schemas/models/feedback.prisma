@@ -2,8 +2,8 @@
 // for debugging) and the public suggestion wall with per-user voting.
 
 model FeedbackReport {
-  id      String @id @default(uuid())
-  message String
+  id           String @id @default(uuid())
+  message      String
   // Full data-export blob captured at report time, stored only when the user
   // checked the consent box. Read via the admin inspector; deletable once the
   // report is resolved.
@@ -35,7 +35,7 @@ model Suggestion {
 }
 
 model SuggestionVote {
-  id String @id @default(uuid())
+  id    String @id @default(uuid())
   // +1 or -1; one row per user per suggestion (the unique below).
   value Int
 

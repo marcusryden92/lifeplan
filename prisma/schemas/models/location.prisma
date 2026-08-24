@@ -29,6 +29,9 @@ model Location {
   // Categories assigned to this location
   categories Category[]
 
+  // External calendar sources whose imported events default to this location
+  externalCalendarSources ExternalCalendarSource[]
+
   @@unique([userId, placeId]) // Prevent duplicate locations per user
   @@map("Locations")
 }

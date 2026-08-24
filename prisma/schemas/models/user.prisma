@@ -1,56 +1,56 @@
 model User {
-  id                    String                 @id @default(cuid())
-  name                  String?
-  email                 String?                @unique
-  emailVerified         DateTime?              @map("email_verified")
-  image                 String?
-  password              String?
+  id                          String                       @id @default(cuid())
+  name                        String?
+  email                       String?                      @unique
+  emailVerified               DateTime?                    @map("email_verified")
+  image                       String?
+  password                    String?
   // Stamped on every password change (reset flow + settings). The jwt
   // callback compares it against the token's iat and invalidates sessions
   // issued before the change.
-  passwordChangedAt     DateTime?              @map("password_changed_at")
-  role                  UserRole               @default(USER)
-  isTwoFactorEnabled    Boolean                @default(false)
+  passwordChangedAt           DateTime?                    @map("password_changed_at")
+  role                        UserRole                     @default(USER)
+  isTwoFactorEnabled          Boolean                      @default(false)
   // Monotonic counter bumped inside every successful sync transaction.
   // Used as the OCC token: client sends its known version, server compares
   // and either commits + increments or rejects the entire sync as stale.
-  dataVersion           Int                    @default(0)
+  dataVersion                 Int                          @default(0)
   // Null until the user finishes (or skips) first-run onboarding; the dashboard
   // redirect predicate is "onboardedAt === null".
-  onboardedAt           DateTime?              @map("onboarded_at")
+  onboardedAt                 DateTime?                    @map("onboarded_at")
   // Null until the user decides (onboarding AI gate or settings). The API key
   // itself never reaches the server in BYOK mode — it lives encrypted on the
   // user's device. MANAGED is reserved for a future app-key paid mode.
-  aiMode                AiMode?                @map("ai_mode")
-  EventTemplate         EventTemplate[]
-  Planner               Planner[]
-  SimpleEvent           SimpleEvent[]
-  twoFactorConfirmation TwoFactorConfirmation?
-  accountDeletionToken  AccountDeletionToken?
-  accounts              Account[]
-  locations             Location[]
-  categories            Category[]
-  categoryTimeWindows   CategoryTimeWindow[]
-  categoryEvents        CategoryEvent[]
-  travelEvents          TravelEvent[]
-  engineMessages        EngineMessage[]
-  draftConversations    DraftConversation[]
-  verificationTokens    VerificationToken[]
-  queues                Queue[]
-  queueMembers          QueueMember[]
-  plannerDependencies   PlannerDependency[]
-  viewState             UserViewState?
-  externalCalendarSources ExternalCalendarSource[]
-  externalEvents          ExternalEvent[]
-  googleCalendarConnection GoogleCalendarConnection?
+  aiMode                      AiMode?                      @map("ai_mode")
+  EventTemplate               EventTemplate[]
+  Planner                     Planner[]
+  SimpleEvent                 SimpleEvent[]
+  twoFactorConfirmation       TwoFactorConfirmation?
+  accountDeletionToken        AccountDeletionToken?
+  accounts                    Account[]
+  locations                   Location[]
+  categories                  Category[]
+  categoryTimeWindows         CategoryTimeWindow[]
+  categoryEvents              CategoryEvent[]
+  travelEvents                TravelEvent[]
+  engineMessages              EngineMessage[]
+  draftConversations          DraftConversation[]
+  verificationTokens          VerificationToken[]
+  queues                      Queue[]
+  queueMembers                QueueMember[]
+  plannerDependencies         PlannerDependency[]
+  viewState                   UserViewState?
+  externalCalendarSources     ExternalCalendarSource[]
+  externalEvents              ExternalEvent[]
+  googleCalendarConnection    GoogleCalendarConnection?
   microsoftCalendarConnection MicrosoftCalendarConnection?
-  occurrenceCompletions   OccurrenceCompletion[]
-  habitBuckets            HabitBucket[]
-  habits                  Habit[]
-  habitItems              HabitItem[]
-  feedbackReports         FeedbackReport[]
-  suggestions             Suggestion[]
-  suggestionVotes         SuggestionVote[]
+  occurrenceCompletions       OccurrenceCompletion[]
+  habitBuckets                HabitBucket[]
+  habits                      Habit[]
+  habitItems                  HabitItem[]
+  feedbackReports             FeedbackReport[]
+  suggestions                 Suggestion[]
+  suggestionVotes             SuggestionVote[]
 
   @@map("users")
 }

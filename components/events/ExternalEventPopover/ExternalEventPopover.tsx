@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { CalendarClock, RefreshCw, Settings } from "lucide-react";
 import { EventImpl } from "@fullcalendar/core/internal";
-import type { AppDispatch } from "@/redux/store";
+import type { AppDispatch, RootState } from "@/redux/store";
 import {
   applyExternalRefresh,
   upsertExternalSource,
@@ -14,13 +14,21 @@ import {
   refreshExternalCalendarSource,
   toggleExternalEventBusyException,
   updateExternalCalendarSource,
+  setExternalEventLocation,
 } from "@/actions/externalCalendars";
 import { toggleModeException } from "@/utils/external-calendar/modeExceptions";
+import {
+  setLocationException,
+  clearLocationException,
+  hasLocationException,
+  resolveExternalEventLocation,
+} from "@/utils/external-calendar/locationExceptions";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { RuntimeEventExtendedProps } from "@/types/ui";
 import { Button, TypeBadge } from "@/components/ui";
 import { CalendarPopover } from "../CalendarPopover";
 import { PopoverColorPicker } from "../PopoverColorPicker";
+import { PopoverLocationPicker } from "../PopoverLocationPicker";
 import {
   POPOVER_WIDTH,
   popoverBody,
@@ -41,7 +49,7 @@ interface ExternalEventPopoverProps {
   onClose: () => void;
 }
 
-const POPOVER_HEIGHT = 300;
+const POPOVER_HEIGHT = 360;
 const FALLBACK_ACCENT = "#8b8b8b";
 
 const ExternalEventPopover: React.FC<ExternalEventPopoverProps> = ({
@@ -54,6 +62,9 @@ const ExternalEventPopover: React.FC<ExternalEventPopoverProps> = ({
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { updateAll, externalSources } = useCalendarProvider();
+  const locations = useSelector(
+    (state: RootState) => state.schedulingSettings.locations,
+  );
   const [refreshing, setRefreshing] = useState(false);
 
   const ext = event.extendedProps as RuntimeEventExtendedProps;
@@ -64,6 +75,58 @@ const ExternalEventPopover: React.FC<ExternalEventPopoverProps> = ({
   const source = externalSources.find((s) => s.id === sourceId);
   const sourceName =
     source?.name ?? ext.externalSourceName ?? "Imported calendar";
+
+  const overridden = !!source && !!uid && hasLocationException(source.locationExceptions, uid);
+  const locationValue =
+    source && uid ? resolveExternalEventLocation(source, uid) : null;
+  const inheritedLocationName =
+    locations.find((l) => l.id === (source?.locationId ?? null))?.name ??
+    "Anywhere";
+
+  // Optimistic like the busy toggle: the source's exception map updates in
+  // Redux (tile + engine regen follow), the server write settles after.
+  const persistLocationExceptions = (
+    nextRaw: string | null,
+    action: () => ReturnType<typeof setExternalEventLocation>,
+  ) => {
+    if (!source) return;
+    const prev = source;
+    dispatch(upsertExternalSource({ ...source, locationExceptions: nextRaw }));
+    updateAll();
+    void action().then((result) => {
+      if (result.success) {
+        dispatch(upsertExternalSource(result.source));
+      } else {
+        dispatch(upsertExternalSource(prev));
+        updateAll();
+      }
+    });
+  };
+
+  const onToggleLocationOverride = () => {
+    if (!source || !uid) return;
+    if (overridden) {
+      persistLocationExceptions(
+        clearLocationException(source.locationExceptions, uid),
+        () => setExternalEventLocation(source.id, uid, { inherit: true }),
+      );
+    } else {
+      const seed = source.locationId ?? null;
+      persistLocationExceptions(
+        setLocationException(source.locationExceptions, uid, seed),
+        () =>
+          setExternalEventLocation(source.id, uid, { locationId: seed }),
+      );
+    }
+  };
+
+  const onChangeLocation = (locationId: string | null) => {
+    if (!source || !uid) return;
+    persistLocationExceptions(
+      setLocationException(source.locationExceptions, uid, locationId),
+      () => setExternalEventLocation(source.id, uid, { locationId }),
+    );
+  };
 
   // Optimistic like the settings row: the source recolors in Redux
   // immediately (color is render-only, no regen), the server write settles
@@ -179,6 +242,17 @@ const ExternalEventPopover: React.FC<ExternalEventPopoverProps> = ({
                 checked={busy}
                 onCheckedChange={onToggleBusy}
                 ariaLabel="Blocks scheduling"
+              />
+            )}
+
+            {!allDay && busy && source && uid && (
+              <PopoverLocationPicker
+                value={locationValue}
+                onChange={onChangeLocation}
+                isOverridden={overridden}
+                onToggleOverride={onToggleLocationOverride}
+                inheritedLocationName={inheritedLocationName}
+                inheritedFromLabel={sourceName}
               />
             )}
 

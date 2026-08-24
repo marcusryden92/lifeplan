@@ -86,6 +86,8 @@ const SOURCE: ExternalCalendarSource = {
   enabled: true,
   mode: ExternalCalendarMode.BUSY,
   modeExceptions: null,
+  locationId: null,
+  locationExceptions: null,
   lastFetchedAt: null,
   lastError: null,
   createdAt: FAKE_TODAY.toISOString(),

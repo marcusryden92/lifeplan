@@ -6,6 +6,7 @@ import {
   type SimpleEvent,
 } from "@/types/prisma";
 import { parseModeExceptions } from "./modeExceptions";
+import { parseLocationExceptions } from "./locationExceptions";
 
 // Resolves which imported events actually block the engine: a BUSY source's
 // events minus its exceptions, plus a VISUAL source's excepted events. All-day
@@ -24,6 +25,8 @@ export function deriveExternalBusyEvents(
         enabled: source.enabled,
         busyByDefault: source.mode === ExternalCalendarMode.BUSY,
         exceptions: new Set(parseModeExceptions(source.modeExceptions)),
+        defaultLocationId: source.locationId ?? null,
+        locationExceptions: parseLocationExceptions(source.locationExceptions),
       },
     ]),
   );
@@ -36,6 +39,12 @@ export function deriveExternalBusyEvents(
     const excepted = source.exceptions.has(event.uid);
     if (source.busyByDefault === excepted) continue;
     if (event.end <= event.start) continue;
+    const locationId = Object.prototype.hasOwnProperty.call(
+      source.locationExceptions,
+      event.uid,
+    )
+      ? source.locationExceptions[event.uid]
+      : source.defaultLocationId;
     busy.push({
       id: event.id,
       title: event.title,
@@ -59,6 +68,7 @@ export function deriveExternalBusyEvents(
         completedEndTime: null,
         parentId: null,
         eventId: event.id,
+        locationId,
       },
     });
   }

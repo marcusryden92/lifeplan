@@ -123,6 +123,18 @@ export function buildAvailableSlots({
   const eventOccupiedSlots: OccupiedSlot[] = relevantEvents.map((event) => {
     const start = new Date(event.start);
     const end = new Date(event.end);
+    const eventType =
+      (event.extendedProps?.eventType as
+        | Exclude<EventType, "travel">
+        | undefined) ?? EventType.planner;
+    // Imported external busy blocks aren't in the planner location map (they
+    // carry composite source-scoped ids). deriveExternalBusyEvents resolves
+    // their location — source default or per-event override — and stamps it on
+    // extendedProps, so travel is injected around a located shift.
+    const locationId =
+      eventType === EventType.external
+        ? (event.extendedProps?.locationId ?? null)
+        : (plannerLocationMap?.get(plannerIdFromEventId(event.id)) ?? null);
     return {
       type: "occupied",
       start,
@@ -132,12 +144,8 @@ export function buildAvailableSlots({
       plannerType:
         (event.extendedProps?.plannerType as PlannerType | undefined) ??
         PlannerType.plan,
-      eventType:
-        (event.extendedProps?.eventType as
-          | Exclude<EventType, "travel">
-          | undefined) ?? EventType.planner,
-      locationId:
-        plannerLocationMap?.get(plannerIdFromEventId(event.id)) ?? null,
+      eventType,
+      locationId,
     };
   });
 
